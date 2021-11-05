@@ -2,7 +2,8 @@ import uuid
 import json
 from template import create_template
 
-from parameters import create_uuid_parameter, create_environment_parameter, create_certificate_arn_parameter, create_vpc_parameter, \
+from parameters import create_uuid_parameter, create_environment_parameter, create_certificate_arn_parameter, \
+    create_redirect_certificate_arn_parameter, create_vpc_parameter, create_cname_parameter, create_cname_redirect_parameter, \
     create_subnets_parameter, create_database_password_parameter, create_database_class_parameter, \
     create_database_allocated_storage_parameter, create_redis_node_class_parameter, create_redis_nodes_count_parameter, \
     create_api_instance_class_parameter, create_api_instance_count_parameter, create_api_task_count_parameter, \
@@ -17,6 +18,7 @@ from variables import create_default_queue_name_variable, create_notifications_q
     create_api_user_name_variable, create_ci_user_name_variable, create_database_name_variable, create_database_username_variable, create_api_name_variable, create_elasticsearch_domain_name_variable, create_elasticsearch_log_access_policy_lambda_name_variable
 
 from resources import create_load_balancer_security_group_resource, create_api_security_group_resource, \
+    create_redirect_bucket_resource, create_redirect_cloudfront_distribution_resource, \
     create_database_security_group_resource, create_redis_security_group_resource, create_database_subnet_group_resource, \
     create_database_resource, create_redis_subnet_group_resource, create_redis_resource, create_default_queue_resource, \
     create_notifications_queue_resource, create_search_queue_resource, create_uploads_bucket_resource, \
@@ -24,7 +26,7 @@ from resources import create_load_balancer_security_group_resource, create_api_s
     create_launch_template_resource, create_docker_repository_resource, create_api_log_group_resource, \
     create_queue_worker_log_group_resource, create_scheduler_log_group_resource, create_elasticsearch_log_group_resource, create_elasticsearch_lambda_log_group_resource, create_api_task_definition_resource, \
     create_queue_worker_task_definition_resource, create_scheduler_task_definition_resource, create_load_balancer_resource, \
-    create_api_tarcreate_group_resource, create_load_balancer_listener_resource, create_ecs_service_role_resource, \
+    create_api_target_group_resource, create_load_balancer_listener_resource, create_ecs_service_role_resource, \
     create_api_service_resource, create_queue_worker_service_resource, create_scheduler_service_resource, \
     create_autoscaling_group_resource, create_api_user_resource, create_ci_user_resource, \
     create_elasticsearch_security_group_resource, create_elasticsearch_lambda_execution_role_resource, \
@@ -46,7 +48,10 @@ template = create_template(api_name)
 # Parameters.
 uuid_parameter = create_uuid_parameter(template, uuid)
 environment_parameter = create_environment_parameter(template)
+cname_parameter = create_cname_parameter(template)
+cname_redirect_parameter = create_cname_redirect_parameter(template)
 certificate_arn_parameter = create_certificate_arn_parameter(template)
+redirect_certificate_arn_parameter = create_redirect_certificate_arn_parameter(template)
 vpc_parameter = create_vpc_parameter(template)
 subnets_parameter = create_subnets_parameter(template)
 database_password_parameter = create_database_password_parameter(template)
@@ -116,6 +121,10 @@ redis_security_group_resource = create_redis_security_group_resource(
     template, api_security_group_resource)
 elasticsearch_security_group_resource = create_elasticsearch_security_group_resource(
     template, api_security_group_resource)
+
+# Redirects
+redirect_bucket_resource = create_redirect_bucket_resource(template, cname_redirect_parameter, cname_parameter)
+redirect_cloudfront_distribution_resource = create_redirect_cloudfront_distribution_resource(template, cname_redirect_parameter, redirect_bucket_resource, redirect_certificate_arn_parameter)
 
 # Database
 database_subnet_group_resource = create_database_subnet_group_resource(
@@ -190,16 +199,16 @@ scheduler_task_definition_resource = create_scheduler_task_definition_resource(t
 # Load Balancing
 load_balancer_resource = create_load_balancer_resource(
     template, load_balancer_security_group_resource, subnets_parameter)
-api_tarcreate_group_resource = create_api_tarcreate_group_resource(
+api_target_group_resource = create_api_target_group_resource(
     template, vpc_parameter, load_balancer_resource)
 load_balancer_listener_resource = create_load_balancer_listener_resource(template, load_balancer_resource,
-                                                                         api_tarcreate_group_resource,
+                                                                         api_target_group_resource,
                                                                          certificate_arn_parameter)
 
 # ECS Services
 ecs_service_role_resource = create_ecs_service_role_resource(template)
 api_service_resource = create_api_service_resource(template, ecs_cluster_resource, api_task_definition_resource,
-                                                   api_task_count_parameter, api_tarcreate_group_resource,
+                                                   api_task_count_parameter, api_target_group_resource,
                                                    ecs_service_role_resource, load_balancer_listener_resource)
 queue_worker_service_resource = create_queue_worker_service_resource(template, ecs_cluster_resource,
                                                                      queue_worker_task_definition_resource,

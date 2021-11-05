@@ -1,18 +1,19 @@
 from troposphere import GetAtt, Ref, Base64, Join, Sub, Select
-from troposphere.cloudformation import AWSCustomObject
-import troposphere.ec2 as ec2
-import troposphere.rds as rds
-import troposphere.elasticache as elasticache
-import troposphere.sqs as sqs
-import troposphere.s3 as s3
-import troposphere.iam as iam
-import troposphere.ecs as ecs
-import troposphere.ecr as ecr
-import troposphere.logs as logs
-import troposphere.elasticloadbalancingv2 as elb
 import troposphere.autoscaling as autoscaling
-import troposphere.elasticsearch as elasticsearch
 import troposphere.awslambda as awslambda
+from troposphere.cloudformation import AWSCustomObject
+import troposphere.cloudfront as cloudfront
+import troposphere.ec2 as ec2
+import troposphere.ecr as ecr
+import troposphere.ecs as ecs
+import troposphere.elasticache as elasticache
+import troposphere.elasticloadbalancingv2 as elb
+import troposphere.elasticsearch as elasticsearch
+import troposphere.iam as iam
+import troposphere.logs as logs
+import troposphere.rds as rds
+import troposphere.s3 as s3
+import troposphere.sqs as sqs
 
 
 class CustomLogGroupPolicy(AWSCustomObject):
@@ -491,7 +492,7 @@ def create_load_balancer_resource(template, load_balancer_security_group_resourc
     )
 
 
-def create_api_tarcreate_group_resource(template, vpc_parameter, load_balancer_resource):
+def create_api_target_group_resource(template, vpc_parameter, load_balancer_resource):
     return template.add_resource(
         elb.TargetGroup(
             'ApiTargetGroup',
@@ -511,7 +512,7 @@ def create_api_tarcreate_group_resource(template, vpc_parameter, load_balancer_r
     )
 
 
-def create_load_balancer_listener_resource(template, load_balancer_resource, api_tarcreate_group_resource,
+def create_load_balancer_listener_resource(template, load_balancer_resource, api_target_group_resource,
                                            certificate_arn_parameter):
     return template.add_resource(
         elb.Listener(
@@ -521,7 +522,7 @@ def create_load_balancer_listener_resource(template, load_balancer_resource, api
             Protocol='HTTPS',
             DefaultActions=[elb.Action(
                 Type='forward',
-                TargetGroupArn=Ref(api_tarcreate_group_resource)
+                TargetGroupArn=Ref(api_target_group_resource)
             )],
             Certificates=[
                 elb.Certificate(
@@ -598,7 +599,7 @@ def create_ecs_service_role_resource(template):
 
 
 def create_api_service_resource(template, ecs_cluster_resource, api_task_definition_resource, api_task_count_parameter,
-                                api_tarcreate_group_resource, ecs_service_role_resource, load_balancer_listener_resource):
+                                api_target_group_resource, ecs_service_role_resource, load_balancer_listener_resource):
     return template.add_resource(
         ecs.Service(
             'ApiService',
@@ -614,7 +615,7 @@ def create_api_service_resource(template, ecs_cluster_resource, api_task_definit
             LoadBalancers=[ecs.LoadBalancer(
                 ContainerName='api',
                 ContainerPort=80,
-                TargetGroupArn=Ref(api_tarcreate_group_resource)
+                TargetGroupArn=Ref(api_target_group_resource)
             )],
             Role=Ref(ecs_service_role_resource),
             DependsOn=[load_balancer_listener_resource]
@@ -975,3 +976,52 @@ def create_elasticsearch_resource(template, elasticsearch_domain_name_variable,
             )
         )
     )
+
+def create_redirect_bucket_resource(template, cname_redirect_parameter, cname_parameter):
+    return template.add_resource(
+    s3.Bucket(
+        'Bucket301',
+        BucketName=Ref(cname_redirect_parameter),
+        AccessControl=s3.PublicRead,
+        WebsiteConfiguration=s3.WebsiteConfiguration(
+            RedirectAllRequestsTo=s3.RedirectAllRequestsTo(
+            HostName=Ref(cname_parameter),
+            )
+        )
+    )
+)
+
+def create_redirect_cloudfront_distribution_resource(template, cname_redirect_parameter, redirect_bucket_resource, redirect_certificate_arn_parameter):
+    return template.add_resource(
+    cloudfront.Distribution(
+        'Distribution301',
+        DistributionConfig=cloudfront.DistributionConfig(
+            Aliases=[
+                Ref(cname_redirect_parameter)
+            ],
+            DefaultCacheBehavior=cloudfront.DefaultCacheBehavior(
+                ForwardedValues=cloudfront.ForwardedValues(
+                    QueryString=False
+                ),
+                TargetOriginId=Join('-', ['S3', Ref(redirect_bucket_resource)]),
+                ViewerProtocolPolicy='redirect-to-https'
+            ),
+            Enabled=True,
+            IPV6Enabled=True,
+            Origins=[
+                cloudfront.Origin(
+                    DomainName=Join('.', [Ref(cname_redirect_parameter), 's3-website', Ref('AWS::Region'),'amazonaws.com']),
+                    Id=Join('-', ['S3', Ref(redirect_bucket_resource)]),
+                    CustomOriginConfig=cloudfront.CustomOrigin(
+                        OriginProtocolPolicy='http-only'
+                    )
+                )
+            ],
+            ViewerCertificate=cloudfront.ViewerCertificate(
+                AcmCertificateArn=Ref(redirect_certificate_arn_parameter),
+                SslSupportMethod='sni-only',
+                MinimumProtocolVersion='TLSv1.2_2019'
+            )
+        )
+    )
+)

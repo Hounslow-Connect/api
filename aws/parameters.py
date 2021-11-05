@@ -34,6 +34,15 @@ def create_certificate_arn_parameter(template):
         )
     )
 
+def create_redirect_certificate_arn_parameter(template):
+    return template.add_parameter(
+        Parameter(
+            'Certificate301Arn',
+            Type='String',
+            Description='The ARN for the CloudFront distribution SSL certificate covering the domain to be 301 redirected (must be in us-east-1).'
+        )
+    )
+
 
 def create_vpc_parameter(template):
     return template.add_parameter(
@@ -235,3 +244,27 @@ def create_elasticsearch_instance_count_parameter(template):
             ConstraintDescription='Must be 1 or more.'
         )
     )
+
+def create_cname_redirect_parameter(template):
+    return template.add_parameter(
+    Parameter(
+        'Cname301',
+        Type='String',
+        Description='The CNAME that should be 301 redirected to the site CNAME.',
+        MinLength='1',
+        AllowedPattern='^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$',
+        ConstraintDescription='Must be a valid domain'
+    )
+)
+
+def create_cname_parameter(template):
+    return template.add_parameter(
+    Parameter(
+        'Cname',
+        Type='String',
+        Description='The site CNAME.',
+        MinLength='1',
+        AllowedPattern='^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$',
+        ConstraintDescription='Must be a valid domain'
+    )
+)
