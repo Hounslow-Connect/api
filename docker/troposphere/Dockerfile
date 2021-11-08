@@ -9,7 +9,7 @@ WORKDIR /tmp
 
 # Install generic software.
 RUN apt-get -qq update \
-    && apt-get install -y build-essential libssl-dev libseccomp libpaper1 groff \
+    && apt-get install -y build-essential libssl-dev libseccomp2 libpaper1 groff \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install the Python dependency requirements.
