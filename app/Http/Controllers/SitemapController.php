@@ -52,7 +52,7 @@ class SitemapController extends Controller
      */
     public function createStaticPageNodes()
     {
-        $pages = [
+        $pageSlugs = [
             '',
             'about',
             'contact',
@@ -61,14 +61,16 @@ class SitemapController extends Controller
             'terms-and-conditions',
         ];
 
-        $this->addUrlNodes(collect($pages)
-                ->map(function ($slug) {
-                    return [
-                        'path' => $slug,
-                        'updated' => date(DateTime::W3C, strtotime('2 weeks ago')),
-                    ];
-                })
-                ->all());
+        $pages = collect($pageSlugs)
+            ->map(function ($slug) {
+                return [
+                    'path' => $slug,
+                    'updated' => date(DateTime::W3C, strtotime('2 weeks ago')),
+                ];
+            })
+            ->all();
+
+        $this->addUrlNodes($pages);
     }
 
     /**
