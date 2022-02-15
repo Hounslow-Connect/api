@@ -62,13 +62,13 @@ class SitemapController extends Controller
         ];
 
         $this->addUrlNodes(collect($pages)
-            ->map(function ($slug) {
+                ->map(function ($slug) {
                     return [
                         'path' => $slug,
                         'updated' => date(DateTime::W3C, strtotime('2 weeks ago')),
                     ];
                 })
-            ->all());
+                ->all());
     }
 
     /**
