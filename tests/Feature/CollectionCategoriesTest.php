@@ -867,7 +867,7 @@ class CollectionCategoriesTest extends TestCase
      * Get a specific categories image.
      */
 
-    public function test_guest_can_view_image()
+    public function test_guest_can_view_image_as_svg()
     {
         $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
 
@@ -889,6 +889,55 @@ class CollectionCategoriesTest extends TestCase
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertHeader('Content-Type', 'image/svg+xml');
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $response->content());
+    }
+
+    public function test_guest_can_view_image_as_png()
+    {
+        $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.png',
+            'mime_type' => 'image/png',
+        ]);
+
+        $base64Image = 'data:image/png;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.png'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        $meta = $collectionCategory->meta;
+        $meta['image_file_id'] = $image->id;
+        $collectionCategory->meta = $meta;
+        $collectionCategory->save();
+
+        $response = $this->get("/core/v1/collections/categories/{$collectionCategory->id}/image.png");
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertHeader('Content-Type', 'image/png');
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.png'), $response->content());
+    }
+
+    public function test_guest_can_view_image_as_jpg()
+    {
+        $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.png',
+            'mime_type' => 'image/jpeg',
+        ]);
+
+        $base64Image = 'data:image/png;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.jpg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        $meta = $collectionCategory->meta;
+        $meta['image_file_id'] = $image->id;
+        $collectionCategory->meta = $meta;
+        $collectionCategory->save();
+
+        $response = $this->get("/core/v1/collections/categories/{$collectionCategory->id}/image.jpg");
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.jpg'), $response->content());
     }
 
     public function test_audit_created_when_image_viewed()
