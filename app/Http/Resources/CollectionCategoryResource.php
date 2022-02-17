@@ -19,7 +19,6 @@ class CollectionCategoryResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'intro' => $this->meta['intro'],
-            'icon' => $this->meta['icon'],
             'order' => $this->order,
             'enabled' => $this->enabled,
             'sideboxes' => $this->meta['sideboxes'],

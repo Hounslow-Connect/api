@@ -6,6 +6,7 @@ use App\Events\EndpointHit;
 use App\Models\Audit;
 use App\Models\Collection;
 use App\Models\CollectionTaxonomy;
+use App\Models\File;
 use App\Models\Organisation;
 use App\Models\Service;
 use App\Models\Taxonomy;
@@ -13,6 +14,8 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -31,7 +34,6 @@ class CollectionCategoriesTest extends TestCase
             'id',
             'name',
             'intro',
-            'icon',
             'order',
             'enabled',
             'sideboxes' => [
@@ -71,7 +73,6 @@ class CollectionCategoriesTest extends TestCase
                     'id',
                     'name',
                     'intro',
-                    'icon',
                     'order',
                     'enabled',
                     'sideboxes' => [
@@ -242,12 +243,21 @@ class CollectionCategoriesTest extends TestCase
         $user->makeSuperAdmin();
         $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [
@@ -264,7 +274,6 @@ class CollectionCategoriesTest extends TestCase
             'id',
             'name',
             'intro',
-            'icon',
             'order',
             'enabled',
             'sideboxes' => [
@@ -288,7 +297,6 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [
@@ -301,6 +309,10 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'id' => $randomCategory->id,
         ]);
+
+        $collectionArray = $this->getResponseContent($response)['data'];
+        $response = $this->get("/core/v1/collections/categories/{$collectionArray['id']}/image.svg");
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $response->content());
     }
 
     public function test_super_admin_can_create_a_disabled_one()
@@ -312,12 +324,21 @@ class CollectionCategoriesTest extends TestCase
         $user->makeSuperAdmin();
         $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [
@@ -334,7 +355,6 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [
@@ -346,10 +366,119 @@ class CollectionCategoriesTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_cannot_create_one_without_an_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeSuperAdmin();
+        $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        Passport::actingAs($user);
+
+        $response = $this->json('POST', '/core/v1/collections/categories', [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [
+                [
+                    'title' => 'Sidebox title',
+                    'content' => 'Sidebox content',
+                ],
+            ],
+            'category_taxonomies' => [$randomCategory->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/collections/categories', [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'image_file_id' => '',
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [
+                [
+                    'title' => 'Sidebox title',
+                    'content' => 'Sidebox content',
+                ],
+            ],
+            'category_taxonomies' => [$randomCategory->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/collections/categories', [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'image_file_id' => uuid(),
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [
+                [
+                    'title' => 'Sidebox title',
+                    'content' => 'Sidebox content',
+                ],
+            ],
+            'category_taxonomies' => [$randomCategory->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_NOT_FOUND);
+    }
+
+    public function test_super_admin_cannot_create_one_with_an_assigned_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeSuperAdmin();
+        $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('POST', '/core/v1/collections/categories', [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [
+                [
+                    'title' => 'Sidebox title',
+                    'content' => 'Sidebox content',
+                ],
+            ],
+            'category_taxonomies' => [$randomCategory->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     public function test_order_is_updated_when_created_at_beginning()
     {
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
 
         /**
          * @var \App\Models\User $user
@@ -363,7 +492,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -374,7 +502,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -385,7 +512,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -395,7 +521,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -414,6 +540,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -426,7 +561,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -437,7 +571,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -448,7 +581,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -458,7 +590,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 2,
             'enabled' => true,
             'sideboxes' => [],
@@ -477,6 +609,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -489,7 +630,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -500,7 +640,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -511,7 +650,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -521,7 +659,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -540,6 +678,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -551,7 +698,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 0,
             'enabled' => true,
             'sideboxes' => [],
@@ -566,6 +713,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -578,7 +734,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -589,7 +744,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -599,7 +753,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -613,6 +767,15 @@ class CollectionCategoriesTest extends TestCase
     {
         $this->fakeEvents();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -625,7 +788,7 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/categories', [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -654,7 +817,6 @@ class CollectionCategoriesTest extends TestCase
             'id',
             'name',
             'intro',
-            'icon',
             'order',
             'enabled',
             'sideboxes' => [
@@ -679,7 +841,6 @@ class CollectionCategoriesTest extends TestCase
             'id' => $collectionCategory->id,
             'name' => $collectionCategory->name,
             'intro' => $collectionCategory->meta['intro'],
-            'icon' => $collectionCategory->meta['icon'],
             'order' => $collectionCategory->order,
             'enabled' => $collectionCategory->enabled,
             'sideboxes' => $collectionCategory->meta['sideboxes'],
@@ -699,6 +860,62 @@ class CollectionCategoriesTest extends TestCase
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($response) {
             return ($event->getAction() === Audit::ACTION_READ) &&
                 ($event->getModel()->id === $this->getResponseContent($response)['data']['id']);
+        });
+    }
+
+    /*
+     * Get a specific categories image.
+     */
+
+    public function test_guest_can_view_image()
+    {
+        $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        $meta = $collectionCategory->meta;
+        $meta['image_file_id'] = $image->id;
+        $collectionCategory->meta = $meta;
+        $collectionCategory->save();
+
+        $response = $this->get("/core/v1/collections/categories/{$collectionCategory->id}/image.svg");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertHeader('Content-Type', 'image/svg+xml');
+    }
+
+    public function test_audit_created_when_image_viewed()
+    {
+        $this->fakeEvents();
+
+        $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        $meta = $collectionCategory->meta;
+        $meta['image_file_id'] = $image->id;
+        $collectionCategory->meta = $meta;
+        $collectionCategory->save();
+
+        $this->get("/core/v1/collections/categories/{$collectionCategory->id}/image.svg");
+
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($collectionCategory) {
+            return ($event->getAction() === Audit::ACTION_READ) &&
+                ($event->getModel()->id === $collectionCategory->id);
         });
     }
 
@@ -779,12 +996,21 @@ class CollectionCategoriesTest extends TestCase
         $category = Collection::categories()->inRandomOrder()->firstOrFail();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -796,7 +1022,6 @@ class CollectionCategoriesTest extends TestCase
             'id',
             'name',
             'intro',
-            'icon',
             'order',
             'enabled',
             'sideboxes' => [
@@ -820,7 +1045,6 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -828,6 +1052,12 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'id' => $taxonomy->id,
         ]);
+
+        $category = $category->fresh();
+        $this->assertEquals($image->id, $category->meta['image_file_id']);
+
+        $content = $this->get("/core/v1/collections/categories/{$category->id}/image.svg")->content();
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $content);
     }
 
     public function test_global_admin_cannot_update_status()
@@ -841,13 +1071,22 @@ class CollectionCategoriesTest extends TestCase
         $category->enable()->save();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'subtitle' => 'Subtitle here',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -868,13 +1107,22 @@ class CollectionCategoriesTest extends TestCase
         $category->enable()->save();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'subtitle' => 'Subtitle here',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -886,7 +1134,6 @@ class CollectionCategoriesTest extends TestCase
             'id',
             'name',
             'intro',
-            'icon',
             'order',
             'enabled',
             'sideboxes' => [
@@ -910,7 +1157,6 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -925,6 +1171,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -937,7 +1192,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -948,7 +1202,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -959,7 +1212,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -969,8 +1221,8 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/categories/{$third->id}", [
             'name' => 'Third',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [],
@@ -987,6 +1239,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -999,7 +1260,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1010,7 +1270,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1021,7 +1280,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1031,8 +1289,8 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/categories/{$first->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 2,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [],
@@ -1049,6 +1307,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -1061,7 +1328,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1072,7 +1338,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1083,7 +1348,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1093,8 +1357,8 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/categories/{$first->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 3,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [],
@@ -1111,6 +1375,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -1123,7 +1396,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1133,8 +1405,8 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 0,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [],
@@ -1148,6 +1420,15 @@ class CollectionCategoriesTest extends TestCase
         // Delete the existing seeded categories.
         $this->truncateCollectionCategories();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -1160,7 +1441,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1170,8 +1450,8 @@ class CollectionCategoriesTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 2,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [],
@@ -1192,13 +1472,22 @@ class CollectionCategoriesTest extends TestCase
         $category = Collection::categories()->inRandomOrder()->firstOrFail();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
-            'icon' => 'info',
             'order' => 1,
+            'image_file_id' => $image->id,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [$taxonomy->id],
@@ -1312,6 +1601,40 @@ class CollectionCategoriesTest extends TestCase
         $this->assertDatabaseMissing((new CollectionTaxonomy())->getTable(), ['collection_id' => $category->id]);
     }
 
+    /*
+     * Delete a specific category collection's image.
+     */
+
+    public function test_super_admin_cannot_delete_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeSuperAdmin();
+        $category = Collection::categories()->inRandomOrder()->firstOrFail();
+        $meta = $category->meta;
+        $meta['image_file_id'] = factory(File::class)->create()->id;
+        $category->meta = $meta;
+        $category->save();
+
+        Passport::actingAs($user);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => $category->taxonomies()->pluck(table(Taxonomy::class, 'id')),
+            'image_file_id' => null,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $category = $category->fresh();
+        $this->assertEquals($meta['image_file_id'], $category->meta['image_file_id']);
+    }
+
     public function test_order_is_updated_when_deleted_at_beginning()
     {
         // Delete the existing seeded categories.
@@ -1329,7 +1652,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1340,7 +1662,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1351,7 +1672,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1383,7 +1703,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1394,7 +1713,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1405,7 +1723,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1437,7 +1754,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1448,7 +1764,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);
@@ -1459,7 +1774,6 @@ class CollectionCategoriesTest extends TestCase
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'icon' => 'info',
                 'sideboxes' => [],
             ],
         ]);

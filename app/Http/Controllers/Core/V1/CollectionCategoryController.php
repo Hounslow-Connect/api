@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers\Core\V1;
 
+use App\Models\File;
+use App\Models\Taxonomy;
+use App\Models\Collection;
 use App\Events\EndpointHit;
+use Spatie\QueryBuilder\Filter;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CollectionCategory\DestroyRequest;
-use App\Http\Requests\CollectionCategory\IndexRequest;
+use Spatie\QueryBuilder\QueryBuilder;
+use App\Http\Responses\ResourceDeleted;
+use App\Http\Resources\CollectionCategoryResource;
 use App\Http\Requests\CollectionCategory\ShowRequest;
+use App\Http\Requests\CollectionCategory\IndexRequest;
 use App\Http\Requests\CollectionCategory\StoreRequest;
 use App\Http\Requests\CollectionCategory\UpdateRequest;
-use App\Http\Resources\CollectionCategoryResource;
-use App\Http\Responses\ResourceDeleted;
-use App\Models\Collection;
-use App\Models\Taxonomy;
-use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\Filter;
-use Spatie\QueryBuilder\QueryBuilder;
+use App\Http\Requests\CollectionCategory\DestroyRequest;
 
 class CollectionCategoryController extends Controller
 {
@@ -77,12 +78,16 @@ class CollectionCategoryController extends Controller
                 'name' => $request->name,
                 'meta' => [
                     'intro' => $request->intro,
-                    'icon' => $request->icon,
+                    'image_file_id' => $request->image_file_id,
                     'sideboxes' => $sideboxes,
                 ],
                 'order' => $request->order,
                 'enabled' => $request->enabled,
             ]);
+
+            if ($request->filled('image_file_id')) {
+                File::findOrFail($request->image_file_id)->assigned();
+            }
 
             // Create all of the pivot records.
             $taxonomies = Taxonomy::whereIn('id', $request->category_taxonomies)->get();
@@ -140,12 +145,18 @@ class CollectionCategoryController extends Controller
                 'name' => $request->name,
                 'meta' => [
                     'intro' => $request->intro,
-                    'icon' => $request->icon,
+                    'image_file_id' => $request->has('image_file_id')
+                        ? $request->image_file_id
+                        : $collection->meta['image_file_id'],
                     'sideboxes' => $sideboxes,
                 ],
                 'order' => $request->order,
                 'enabled' => $request->enabled,
             ]);
+
+            if ($request->filled('image_file_id') && $request->image_file_id !== $collection->meta['image_file_id']) {
+                File::findOrFail($request->image_file_id)->assigned();
+            }
 
             // Update or create all of the pivot records.
             $taxonomies = Taxonomy::whereIn('id', $request->category_taxonomies)->get();
