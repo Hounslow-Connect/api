@@ -258,6 +258,8 @@ class File extends Model implements Responsable
     {
         $map = [
             static::MIME_TYPE_PNG => '.png',
+            static::MIME_TYPE_SVG => '.svg',
+            static::MIME_TYPE_JPG => '.jpg',
             static::MIME_TYPE_TXT => '.txt',
         ];
 

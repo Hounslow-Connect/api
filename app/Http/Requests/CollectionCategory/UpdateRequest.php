@@ -60,7 +60,6 @@ class UpdateRequest extends FormRequest
             'category_taxonomies.*' => ['string', 'exists:taxonomies,id', new RootTaxonomyIs(Taxonomy::NAME_CATEGORY)],
             'image_file_id' => [
                 'required',
-                'string',
                 'exists:files,id',
                 new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(),

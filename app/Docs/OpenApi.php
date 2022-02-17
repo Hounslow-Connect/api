@@ -29,6 +29,7 @@ class OpenApi extends BaseOpenApi implements Responsable
                 Paths\Collections\Categories\CollectionCategoriesIndexPath::create(),
                 Paths\Collections\Categories\CollectionCategoriesAllPath::create(),
                 Paths\Collections\Categories\CollectionCategoriesNestedPath::create(),
+                Paths\Collections\Categories\CollectionCategoriesImagePath::create(),
                 Paths\Collections\Personas\CollectionPersonasRootPath::create(),
                 Paths\Collections\Personas\CollectionPersonasIndexPath::create(),
                 Paths\Collections\Personas\CollectionPersonasAllPath::create(),
