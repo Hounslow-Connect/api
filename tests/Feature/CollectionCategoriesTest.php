@@ -919,6 +919,21 @@ class CollectionCategoriesTest extends TestCase
         });
     }
 
+    public function test_default_image_returned_when_image_is_not_set()
+    {
+        $collectionCategory = Collection::categories()->inRandomOrder()->firstOrFail();
+
+        $placeholder = Storage::disk('local')->get('/placeholders/collection_category.png');
+
+        $response = $this->get("/core/v1/collections/categories/{$collectionCategory->id}/image.svg");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertHeader('Content-Type', 'image/png');
+
+        $content = $response->content();
+        $this->assertEquals($placeholder, $content);
+    }
+
     /*
      * Update a specific category collection.
      */
