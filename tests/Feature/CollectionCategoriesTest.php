@@ -36,6 +36,7 @@ class CollectionCategoriesTest extends TestCase
             'intro',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
@@ -75,6 +76,7 @@ class CollectionCategoriesTest extends TestCase
                     'intro',
                     'order',
                     'enabled',
+                    'image_file_id',
                     'sideboxes' => [
                         '*' => [
                             'title',
@@ -276,6 +278,7 @@ class CollectionCategoriesTest extends TestCase
             'intro',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
@@ -819,6 +822,7 @@ class CollectionCategoriesTest extends TestCase
             'intro',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
@@ -1088,6 +1092,7 @@ class CollectionCategoriesTest extends TestCase
             'intro',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
@@ -1109,6 +1114,7 @@ class CollectionCategoriesTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Test Category',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -1160,6 +1166,148 @@ class CollectionCategoriesTest extends TestCase
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function test_global_admin_cannot_update_one_without_an_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeGlobalAdmin();
+        $category = Collection::categories()->inRandomOrder()->firstOrFail();
+        $category->enable()->save();
+        $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'subtitle' => 'Subtitle here',
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => [$taxonomy->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'subtitle' => 'Subtitle here',
+            'image_file_id' => null,
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => [$taxonomy->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function test_global_admin_cannot_update_one_with_an_assigned_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeGlobalAdmin();
+        $category = Collection::categories()->inRandomOrder()->firstOrFail();
+        $category->enable()->save();
+        $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'subtitle' => 'Subtitle here',
+            'image_file_id' => $image->id,
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => [$taxonomy->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function test_global_admin_can_update_one_without_an_image_when_changing_order()
+    {
+        // Delete the existing seeded categories.
+        $this->truncateCollectionCategories();
+
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeGlobalAdmin();
+        $first = Collection::create([
+            'type' => Collection::TYPE_CATEGORY,
+            'name' => 'First',
+            'order' => 1,
+            'enabled' => true,
+            'meta' => [
+                'intro' => 'Lorem ipsum',
+                'sideboxes' => [],
+            ],
+        ]);
+        $second = Collection::create([
+            'type' => Collection::TYPE_CATEGORY,
+            'name' => 'Second',
+            'order' => 2,
+            'enabled' => true,
+            'meta' => [
+                'intro' => 'Lorem ipsum',
+                'sideboxes' => [],
+            ],
+        ]);
+        $third = Collection::create([
+            'type' => Collection::TYPE_CATEGORY,
+            'name' => 'Third',
+            'order' => 3,
+            'enabled' => true,
+            'meta' => [
+                'intro' => 'Lorem ipsum',
+                'sideboxes' => [],
+            ],
+        ]);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$third->id}", [
+            'name' => 'Third',
+            'intro' => 'Lorem ipsum',
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => [],
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $this->assertDatabaseHas((new Collection())->getTable(), ['id' => $first->id, 'order' => 2]);
+        $this->assertDatabaseHas((new Collection())->getTable(), ['id' => $second->id, 'order' => 3]);
+        $this->assertDatabaseHas((new Collection())->getTable(), ['id' => $third->id, 'order' => 1]);
+    }
+
     public function test_super_admin_can_update_status()
     {
         /**
@@ -1200,6 +1348,7 @@ class CollectionCategoriesTest extends TestCase
             'intro',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
