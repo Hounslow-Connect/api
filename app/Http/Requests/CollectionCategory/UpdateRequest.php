@@ -12,7 +12,6 @@ use App\Rules\FileIsPendingAssignment;
 use App\Rules\RootTaxonomyIs;
 use App\Rules\UserHasRole;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateRequest extends FormRequest
 {
@@ -60,18 +59,12 @@ class UpdateRequest extends FormRequest
             'category_taxonomies' => ['present', 'array'],
             'category_taxonomies.*' => ['string', 'exists:taxonomies,id', new RootTaxonomyIs(Taxonomy::NAME_CATEGORY)],
             'image_file_id' => [
-                Rule::requiredIf(function () {
-                    return (
-                        $this->input('name') != $this->collection->name ||
-                        $this->input('intro') != $this->collection->meta['intro'] ?? null ||
-                        $this->input('enabled') != $this->collection->enabled ||
-                        $this->input('sideboxes') != $this->collection->meta['sideboxes'] ?? null ||
-                        $this->input('category_taxonomies') != $this->collection->taxonomies()->pluck('collection_taxonomies.taxonomy_id')->all()
-                    );
-                }),
+                'required_if:order,' . $this->collection->order,
                 'exists:files,id',
                 new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
-                new FileIsPendingAssignment(),
+                new FileIsPendingAssignment(function ($file) {
+                    return $file->id === ($this->collection->meta['image_file_id'] ?? null);
+                }),
             ],
         ];
     }
