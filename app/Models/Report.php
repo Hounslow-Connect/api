@@ -6,7 +6,9 @@ use App\Models\Mutators\ReportMutators;
 use App\Models\Relationships\ReportRelationships;
 use App\Models\Scopes\ReportScopes;
 use Carbon\CarbonImmutable;
+use Closure;
 use Exception;
+use Generator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
@@ -97,54 +99,58 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (User $user) {
+            // Compile the highest roles for a service/organisation.
+            $highestRole = $user->highestRole();
+
+            if (in_array($highestRole->name ?? null, [Role::NAME_SUPER_ADMIN, Role::NAME_GLOBAL_ADMIN])) {
+                // If the highest role is super admin or global admin.
+                $allPermissions = [];
+                $allIds = [];
+            } else {
+                // If the highest role is anything else.
+                $allPermissions = [];
+                $allIds = [];
+
+                // Append the organisation details.
+                $user->organisations
+                    ->each(function (Organisation $organisation) use (&$allPermissions, &$allIds) {
+                        $allPermissions[] = Role::NAME_ORGANISATION_ADMIN;
+                        $allIds[] = $organisation->id;
+                    });
+
+                // Append the service details.
+                $user->services
+                    ->reject(function (Service $service) use ($allIds) {
+                        return in_array($service->organisation_id, $allIds);
+                    })
+                    ->each(function (Service $service) use ($user, &$allPermissions, &$allIds) {
+                        $allPermissions[] = $user->hasRoleCached(Role::serviceAdmin(), $service)
+                        ? Role::NAME_SERVICE_ADMIN
+                        : Role::NAME_SERVICE_WORKER;
+                        $allIds[] = $service->id;
+                    });
+            }
+
+            // Append a row to the data array.
+            return [
+                $user->id,
+                $user->first_name,
+                $user->last_name,
+                $user->email,
+                $highestRole->name ?? null,
+                implode(',', $allPermissions),
+                implode(',', $allIds),
+            ];
+        };
+
         User::query()
             ->with('userRoles.role', 'organisations', 'services')
-            ->chunk(200, function (Collection $users) use (&$data) {
+            ->chunk(200, function (Collection $users) use (&$data, $callback) {
                 // Loop through each user in the chunk.
-                $users->each(function (User $user) use (&$data) {
-                    // Compile the highest roles for a service/organisation.
-                    $highestRole = $user->highestRole();
-
-                    if (in_array($highestRole->name ?? null, [Role::NAME_SUPER_ADMIN, Role::NAME_GLOBAL_ADMIN])) {
-                        // If the highest role is super admin or global admin.
-                        $allPermissions = [];
-                        $allIds = [];
-                    } else {
-                        // If the highest role is anything else.
-                        $allPermissions = [];
-                        $allIds = [];
-
-                        // Append the organisation details.
-                        $user->organisations
-                            ->each(function (Organisation $organisation) use (&$allPermissions, &$allIds) {
-                                $allPermissions[] = Role::NAME_ORGANISATION_ADMIN;
-                                $allIds[] = $organisation->id;
-                            });
-
-                        // Append the service details.
-                        $user->services
-                            ->reject(function (Service $service) use ($allIds) {
-                                return in_array($service->organisation_id, $allIds);
-                            })
-                            ->each(function (Service $service) use ($user, &$allPermissions, &$allIds) {
-                                $allPermissions[] = $user->hasRoleCached(Role::serviceAdmin(), $service)
-                                    ? Role::NAME_SERVICE_ADMIN
-                                    : Role::NAME_SERVICE_WORKER;
-                                $allIds[] = $service->id;
-                            });
-                    }
-
-                    // Append a row to the data array.
-                    $data[] = [
-                        $user->id,
-                        $user->first_name,
-                        $user->last_name,
-                        $user->email,
-                        $highestRole->name ?? null,
-                        implode(',', $allPermissions),
-                        implode(',', $allIds),
-                    ];
-                });
+                foreach ($this->reportRowGenerator($users, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -176,30 +182,33 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (Service $service) {
+            return [
+                $service->organisation->name,
+                $service->organisation->id,
+                $service->organisation->email,
+                $service->organisation->phone,
+                $service->id,
+                $service->name,
+                $service->url,
+                $service->contact_name,
+                $service->updated_at->format(CarbonImmutable::ISO8601),
+                $service->referral_method,
+                $service->referral_email,
+                $service->status,
+                $service->serviceLocations->map(function (ServiceLocation $serviceLocation) {
+                    return $serviceLocation->location->full_address;
+                })->implode('|'),
+            ];
+        };
+
         Service::query()
             ->with('organisation', 'serviceLocations.location')
-            ->chunk(200, function (Collection $services) use (&$data) {
+            ->chunk(200, function (Collection $services) use (&$data, $callback) {
                 // Loop through each service in the chunk.
-                $services->each(function (Service $service) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $service->organisation->name,
-                        $service->organisation->id,
-                        $service->organisation->email,
-                        $service->organisation->phone,
-                        $service->id,
-                        $service->name,
-                        $service->url,
-                        $service->contact_name,
-                        $service->updated_at->format(CarbonImmutable::ISO8601),
-                        $service->referral_method,
-                        $service->referral_email,
-                        $service->status,
-                        $service->serviceLocations->map(function (ServiceLocation $serviceLocation) {
-                            return $serviceLocation->location->full_address;
-                        })->implode('|'),
-                    ];
-                });
+                foreach ($this->reportRowGenerator($services, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -225,22 +234,25 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (Organisation $organisation) {
+            return [
+                $organisation->id,
+                $organisation->name,
+                $organisation->services_count,
+                $organisation->email,
+                $organisation->phone,
+                $organisation->url,
+                $organisation->non_admin_users_count,
+            ];
+        };
+
         Organisation::query()
             ->withCount('services', 'nonAdminUsers')
-            ->chunk(200, function (Collection $organisations) use (&$data) {
+            ->chunk(200, function (Collection $organisations) use (&$data, $callback) {
                 // Loop through each service in the chunk.
-                $organisations->each(function (Organisation $organisation) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $organisation->id,
-                        $organisation->name,
-                        $organisation->services_count,
-                        $organisation->email,
-                        $organisation->phone,
-                        $organisation->url,
-                        $organisation->non_admin_users_count,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($organisations, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -267,23 +279,26 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (Location $location) {
+            return [
+                $location->address_line_1,
+                $location->address_line_2,
+                $location->address_line_3,
+                $location->city,
+                $location->county,
+                $location->postcode,
+                $location->country,
+                $location->services_count,
+            ];
+        };
+
         Location::query()
             ->withCount('services')
-            ->chunk(200, function (Collection $locations) use (&$data) {
+            ->chunk(200, function (Collection $locations) use (&$data, $callback) {
                 // Loop through each location in the chunk.
-                $locations->each(function (Location $location) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $location->address_line_1,
-                        $location->address_line_2,
-                        $location->address_line_3,
-                        $location->city,
-                        $location->county,
-                        $location->postcode,
-                        $location->country,
-                        $location->services_count,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($locations, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -323,30 +338,33 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (Referral $referral) {
+            return [
+                $referral->service->organisation->id,
+                $referral->service->organisation->name,
+                $referral->service->id,
+                $referral->service->name,
+                optional($referral->created_at)->format(CarbonImmutable::ISO8601),
+                $referral->isCompleted()
+                ? $referral->latestCompletedStatusUpdate->created_at->format(CarbonImmutable::ISO8601)
+                : '',
+                $referral->isSelfReferral() ? 'Self' : 'Champion',
+                $referral->isSelfReferral() ? null : $referral->organisationName(),
+                optional($referral->referral_consented_at)->format(CarbonImmutable::ISO8601),
+            ];
+        };
+
         Referral::query()
             ->with('service.organisation', 'latestCompletedStatusUpdate', 'organisationTaxonomy')
             ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
                 // When date range provided, filter referrals which were created between the date range.
                 $query->whereBetween(table(Referral::class, 'created_at'), [$startsAt, $endsAt]);
             })
-            ->chunk(200, function (Collection $referrals) use (&$data) {
+            ->chunk(200, function (Collection $referrals) use (&$data, $callback) {
                 // Loop through each referral in the chunk.
-                $referrals->each(function (Referral $referral) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $referral->service->organisation->id,
-                        $referral->service->organisation->name,
-                        $referral->service->id,
-                        $referral->service->name,
-                        optional($referral->created_at)->format(CarbonImmutable::ISO8601),
-                        $referral->isCompleted()
-                            ? $referral->latestCompletedStatusUpdate->created_at->format(CarbonImmutable::ISO8601)
-                            : '',
-                        $referral->isSelfReferral() ? 'Self' : 'Champion',
-                        $referral->isSelfReferral() ? null : $referral->organisationName(),
-                        optional($referral->referral_consented_at)->format(CarbonImmutable::ISO8601),
-                    ];
-                });
+                foreach ($this->reportRowGenerator($referrals, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -380,21 +398,24 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (PageFeedback $pageFeedback) {
+            return [
+                optional($pageFeedback->created_at)->toDateString(),
+                $pageFeedback->feedback,
+                $pageFeedback->url,
+            ];
+        };
+
         PageFeedback::query()
             ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
                 // When date range provided, filter page feedback which were created between the date range.
                 $query->whereBetween(table(PageFeedback::class, 'created_at'), [$startsAt, $endsAt]);
             })
-            ->chunk(200, function (Collection $pageFeedbacks) use (&$data) {
+            ->chunk(200, function (Collection $pageFeedbacks) use (&$data, $callback) {
                 // Loop through each page feedback in the chunk.
-                $pageFeedbacks->each(function (PageFeedback $pageFeedback) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        optional($pageFeedback->created_at)->toDateString(),
-                        $pageFeedback->feedback,
-                        $pageFeedback->url,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($pageFeedbacks, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -431,25 +452,28 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (Audit $audit) {
+            return [
+                $audit->action,
+                $audit->description,
+                optional($audit->user)->full_name,
+                optional($audit->created_at)->format(CarbonImmutable::ISO8601),
+                $audit->ip_address,
+                $audit->user_agent,
+            ];
+        };
+
         Audit::query()
             ->with('user')
             ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
                 // When date range provided, filter page feedback which were created between the date range.
                 $query->whereBetween(table(Audit::class, 'created_at'), [$startsAt, $endsAt]);
             })
-            ->chunk(200, function (Collection $audits) use (&$data) {
+            ->chunk(200, function (Collection $audits) use (&$data, $callback) {
                 // Loop through each audit in the chunk.
-                $audits->each(function (Audit $audit) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $audit->action,
-                        $audit->description,
-                        optional($audit->user)->full_name,
-                        optional($audit->created_at)->format(CarbonImmutable::ISO8601),
-                        $audit->ip_address,
-                        $audit->user_agent,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($audits, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -484,30 +508,34 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (SearchHistory $searchHistory) {
+            $query = Arr::dot($searchHistory->query);
+
+            $searchQuery = $query['query.bool.must.bool.should.0.match.name.query'] ?? null;
+            $lat = $query['sort.0._geo_distance.service_locations.location.lat'] ?? null;
+            $lon = $query['sort.0._geo_distance.service_locations.location.lon'] ?? null;
+            $coordinate = (!$lat !== null && $lon !== null) ? implode(',', [$lat, $lon]) : null;
+
+            // Append a row to the data array.
+            return [
+                optional($searchHistory->created_at)->toDateString(),
+                $searchQuery,
+                $searchHistory->count,
+                $coordinate,
+            ];
+        };
+
         SearchHistory::query()
             ->withFilledQuery()
             ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
                 // When date range provided, filter search history which were created between the date range.
                 $query->whereBetween(table(SearchHistory::class, 'created_at'), [$startsAt, $endsAt]);
             })
-            ->chunk(200, function (Collection $searchHistories) use (&$data) {
+            ->chunk(200, function (Collection $searchHistories) use (&$data, $callback) {
                 // Loop through each search history in the chunk.
-                $searchHistories->each(function (SearchHistory $searchHistory) use (&$data) {
-                    $query = Arr::dot($searchHistory->query);
-
-                    $searchQuery = $query['query.bool.must.bool.should.0.match.name.query'] ?? null;
-                    $lat = $query['sort.0._geo_distance.service_locations.location.lat'] ?? null;
-                    $lon = $query['sort.0._geo_distance.service_locations.location.lon'] ?? null;
-                    $coordinate = (!$lat !== null && $lon !== null) ? implode(',', [$lat, $lon]) : null;
-
-                    // Append a row to the data array.
-                    $data[] = [
-                        optional($searchHistory->created_at)->toDateString(),
-                        $searchQuery,
-                        $searchHistory->count,
-                        $coordinate,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($searchHistories, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
@@ -545,6 +573,20 @@ class Report extends Model
 
         $data = [$headings];
 
+        $callback = function (UpdateRequest $updateRequest) {
+            return [
+                $updateRequest->user->full_name ?? null,
+                $updateRequest->updateable_type,
+                $updateRequest->entry,
+                $updateRequest->created_at->format(CarbonImmutable::ISO8601),
+                $updateRequest->isApproved() ? 'Approved' : 'Declined',
+                $updateRequest->isApproved()
+                ? $updateRequest->approved_at->format(CarbonImmutable::ISO8601)
+                : $updateRequest->deleted_at->format(CarbonImmutable::ISO8601),
+                $updateRequest->actioningUser->full_name ?? null,
+            ];
+        };
+
         UpdateRequest::withTrashed()
             ->select('*')
             ->withEntry()
@@ -552,35 +594,38 @@ class Report extends Model
             ->orWhereNotNull('deleted_at')
             ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
                 /*
-                 * When date range provided, filter update requests which were created between the
-                 * date range.
-                 */
+             * When date range provided, filter update requests which were created between the
+             * date range.
+             */
                 $query->whereBetween(
                     table(UpdateRequest::class, 'created_at'),
                     [$startsAt, $endsAt]
                 );
             })
-            ->chunk(200, function (Collection $updateRequests) use (&$data) {
+            ->chunk(200, function (Collection $updateRequests) use (&$data, $callback) {
                 // Loop through each update requests in the chunk.
-                $updateRequests->each(function (UpdateRequest $updateRequest) use (&$data) {
-                    // Append a row to the data array.
-                    $data[] = [
-                        $updateRequest->user->full_name ?? null,
-                        $updateRequest->updateable_type,
-                        $updateRequest->entry,
-                        $updateRequest->created_at->format(CarbonImmutable::ISO8601),
-                        $updateRequest->isApproved() ? 'Approved' : 'Declined',
-                        $updateRequest->isApproved()
-                            ? $updateRequest->approved_at->format(CarbonImmutable::ISO8601)
-                            : $updateRequest->deleted_at->format(CarbonImmutable::ISO8601),
-                        $updateRequest->actioningUser->full_name ?? null,
-                    ];
-                });
+                foreach ($this->reportRowGenerator($updateRequests, $callback) as $row) {
+                    $data[] = $row;
+                }
             });
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));
 
         return $this;
+    }
+
+    /**
+     * Report Row Generator
+     *
+     * @param Collection $data
+     * @param Closure $callback
+     * @return Generator
+     **/
+    public function reportRowGenerator(Collection $data, Closure $callback): Generator
+    {
+        foreach ($data as $dataItem) {
+            yield $callback($dataItem);
+        }
     }
 }

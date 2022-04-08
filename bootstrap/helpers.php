@@ -339,12 +339,7 @@ if (!function_exists('array_to_csv')) {
         $fh = fopen('php://temp', 'rw');
 
         // Write out the data.
-        foreach ($data as $row) {
-            // Wrap cells with coma's in double quotes.
-            foreach ($row as &$cell) {
-                $cell = \Illuminate\Support\Str::contains($cell, ',') ? '"' . $cell . '"' : $cell;
-            }
-
+        foreach (rowGenerator($data) as $row) {
             fputcsv($fh, $row);
         }
         rewind($fh);
@@ -352,6 +347,25 @@ if (!function_exists('array_to_csv')) {
         fclose($fh);
 
         return $csv;
+    }
+
+    /**
+     * Generator for the data array
+     * Helps to prevent out of memory errors
+     *
+     * @param Array $data
+     * @return Iterable
+     **/
+    function rowGenerator(array $data): iterable
+    {
+        foreach ($data as $row) {
+            // Wrap cells with coma's in double quotes.
+            foreach ($row as &$cell) {
+                $cell = \Illuminate\Support\Str::contains($cell, ',') ? '"' . $cell . '"' : $cell;
+            }
+
+            yield $row;
+        }
     }
 }
 
