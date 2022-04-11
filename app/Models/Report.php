@@ -616,12 +616,12 @@ class Report extends Model
     }
 
     /**
-     * Report Row Generator
+     * Report Row Generator.
      *
      * @param Collection $data
      * @param Closure $callback
      * @return Generator
-     **/
+     */
     public function reportRowGenerator(Collection $data, Closure $callback): Generator
     {
         foreach ($data as $dataItem) {
