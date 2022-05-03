@@ -189,6 +189,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -259,6 +260,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -307,6 +309,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -356,6 +359,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation1->id,
         ];
@@ -368,7 +372,7 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
-    public function postCreateOrganisationEventAsOrganisationAdminCreatesAudit201()
+    public function postCreateOrganisationEventCreatesAuditAsOrganisationAdmin201()
     {
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
@@ -396,6 +400,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -409,6 +414,278 @@ class OrganisationEventsTest extends TestCase
                 ($event->getUser()->id === $user->id) &&
                 ($event->getModel()->id === $this->getResponseContent($response)['data']['id']);
         });
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventRequiredFieldsAsOrganisationAdmin422()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->date('Y-m-d', '+6 weeks');
+
+        $response = $this->json('POST', '/core/v1/events', []);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'summary' => $this->faker->sentence,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'summary' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventIfNotFreeRequiresFeeDataAsOrganisationAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'summary' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => true,
+            'fees_text' => null,
+            'fees_url' => null,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+        ];
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $payload['is_free'] = false;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['fees_url'] = $this->faker->url;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['fees_text'] = $this->faker->sentence;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventWithOrganiserRequiresOrganiserContactAsOrganisationAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'summary' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => true,
+            'fees_text' => null,
+            'fees_url' => null,
+            'organiser_name' => null,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+        ];
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $payload['organiser_name'] = $this->faker->name;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['organiser_phone'] = random_uk_phone();
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $payload['organiser_phone'] = null;
+        $payload['organiser_email'] = $this->faker->safeEmail;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $payload['organiser_email'] = null;
+        $payload['organiser_url'] = $this->faker->url;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventWithBookingDetailsRequiresAllBookingFieldsAsOrganisationAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'summary' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => true,
+            'fees_text' => null,
+            'fees_url' => null,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+        ];
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $payload['booking_title'] = $this->faker->sentence(3);
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['booking_summary'] = $this->faker->sentence;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['booking_url'] = $this->faker->url;
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $payload['booking_cta'] = $this->faker->words(2, true);
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
     }
 
     /**
@@ -583,6 +860,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -658,6 +936,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -708,6 +987,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
@@ -758,6 +1038,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
         ];
