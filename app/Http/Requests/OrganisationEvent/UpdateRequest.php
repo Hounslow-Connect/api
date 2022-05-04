@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Http\Requests\OrganisationEvent;
+
+use App\Http\Requests\HasMissingValues;
+use App\Models\File;
+use App\Models\Organisation;
+use App\Rules\FileIsMimeType;
+use App\Rules\FileIsPendingAssignment;
+use App\Rules\MarkdownMaxLength;
+use App\Rules\MarkdownMinLength;
+use App\Rules\NullableIf;
+use App\Rules\UkPhoneNumber;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\RequiredIf;
+
+class UpdateRequest extends FormRequest
+{
+    use HasMissingValues;
+
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        if ($this->user()->isOrganisationAdmin($this->organisationEvent->organisation)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'title' => ['string', 'min:1', 'max:255'],
+            'start_date' => ['date_format:Y-m-d', 'after:today'],
+            'end_date' => ['date_format:Y-m-d', 'after_or_equal:start_date'],
+            'start_time' => ['date_format:HH:MM', 'after:now'],
+            'end_time' => ['date_format:HH:MM', 'after_or_equal:start_time'],
+            'intro' => ['string', 'min:1', 'max:300'],
+            'description' => [
+                'string',
+                new MarkdownMinLength(1),
+                new MarkdownMaxLength(3000, 'Description tab - The long description must be 3000 characters or fewer.'),
+            ],
+            'is_free' => ['boolean'],
+            'fees_text' => ['nullable', 'string', 'min:1', 'max:255'],
+            'fees_url' => ['nullable', 'url', 'max:255'],
+            'organiser_name' => ['nullable', 'string', 'min:1', 'max:255'],
+            'organiser_phone' => [
+                'string',
+                'min:1',
+                'max:255',
+                new UkPhoneNumber(),
+                Rule::requiredIf(function () {
+                    return !empty($this->organiser_name) && empty($this->organiser_email) && empty($this->organiser_url);
+                }),
+                new NullableIf(function () {
+                    return empty($this->organiser_name);
+                }),
+            ],
+            'organiser_email' => [
+                'email',
+                'max:255',
+                Rule::requiredIf(function () {
+                    return !empty($this->organiser_name) && empty($this->organiser_phone) && empty($this->organiser_url);
+                }),
+                new NullableIf(function () {
+                    return empty($this->organiser_name);
+                }),
+            ],
+            'organiser_url' => [
+                'url',
+                'max:255',
+                Rule::requiredIf(function () {
+                    return !empty($this->organiser_name) && empty($this->organiser_email) && empty($this->organiser_phone);
+                }),
+                new NullableIf(function () {
+                    return empty($this->organiser_name);
+                }),
+            ],
+            'booking_title' => [
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                'required_with:booking_summary,booking_url,booking_cta',
+            ],
+            'booking_summary' => [
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                'required_with:booking_title,booking_url,booking_cta',
+            ],
+            'booking_url' => [
+                'nullable',
+                'url',
+                'min:1',
+                'max:255',
+                'required_with:booking_summary,booking_title,booking_cta',
+            ],
+            'booking_cta' => [
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                'required_with:booking_summary,booking_url,booking_title',
+            ],
+            'is_virtual' => ['boolean'],
+            'location_id' => [
+                Rule::requiredIf(!$this->is_virtual),
+                'exists:locations,id',
+            ],
+            'image_file_id' => [
+                'nullable',
+                'exists:files,id',
+                new FileIsMimeType(File::MIME_TYPE_PNG),
+                new FileIsPendingAssignment(),
+            ],
+        ];
+    }
+
+    /**
+     * Check if the user requested only a preview of the update request.
+     *
+     * @return bool
+     */
+    public function isPreview(): bool
+    {
+        return $this->preview === true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function messages()
+    {
+        $urlMessage = 'Please enter a valid web address in the correct format (starting with https:// or http://).';
+
+        return [
+            'fees_url.url' => $urlMessage,
+            'organiser_url.url' => $urlMessage,
+            'booking_url.url' => $urlMessage,
+            'organiser_email.email' => "Please enter an email address users can use to contact your event organiser.",
+        ];
+    }
+}

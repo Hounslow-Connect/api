@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Events\EndpointHit;
 use App\Models\Audit;
+use App\Models\Location;
+use App\Models\Organisation;
+use App\Models\OrganisationEvent;
 use App\Models\Service;
 use App\Models\UpdateRequest;
 use App\Models\User;
@@ -37,7 +40,7 @@ class OrganisationEventsTest extends TestCase
             'end_date',
             'start_time',
             'end_time',
-            'summary',
+            'intro',
             'description',
             'is_free',
             'fees_text',
@@ -50,6 +53,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary',
             'booking_url',
             'booking_cta',
+            'is_virtual',
             'location_id',
             'organisation_id',
             'created_at',
@@ -63,7 +67,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $organisationEvent->end_date,
             'start_time' => $organisationEvent->start_time,
             'end_time' => $organisationEvent->end_time,
-            'summary' => $organisationEvent->summary,
+            'intro' => $organisationEvent->intro,
             'description' => $organisationEvent->description,
             'is_free' => $organisationEvent->is_free,
             'fees_text' => $organisationEvent->fees_text,
@@ -76,6 +80,7 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $organisationEvent->booking_summary,
             'booking_url' => $organisationEvent->booking_url,
             'booking_cta' => $organisationEvent->booking_cta,
+            'is_virtual' => $organisationEvent->is_virtual,
             'location_id' => $organisationEvent->location_id,
             'organisation_id' => $organisationEvent->organisation_id,
             'created_at' => $organisationEvent->created_at->format(CarbonImmutable::ISO8601),
@@ -165,9 +170,16 @@ class OrganisationEventsTest extends TestCase
     {
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
+        $image = Storage::disk('local')->get('/test-data/image.png');
         $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
 
         Passport::actingAs($user);
+
+        $imageResponse = $this->json('POST', '/core/v1/files', [
+            'is_private' => false,
+            'mime_type' => 'image/png',
+            'file' => 'data:image/png;base64,' . base64_encode($image),
+        ]);
 
         $date = $this->faker->date('Y-m-d', '+6 weeks');
         $payload = [
@@ -176,7 +188,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -192,6 +204,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ];
 
         $response = $this->json('POST', '/core/v1/events', $payload);
@@ -221,8 +234,10 @@ class OrganisationEventsTest extends TestCase
         Passport::actingAs($globalAdminUser);
 
         $updateRequestCheckResponse = $this->get(
-            route('core.v1.update-requests.show',
-                ['update_request' => $updateRequestId])
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
         );
 
         $updateRequestCheckResponse->assertSuccessful();
@@ -247,7 +262,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -296,7 +311,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -346,7 +361,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -387,7 +402,61 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'is_virtual' => true,
+            'location_id' => null,
+            'organisation_id' => $organisation->id,
+        ];
+
+        $response = $this->json('POST', '/core/v1/events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $response) {
+            return ($event->getAction() === Audit::ACTION_CREATE) &&
+                ($event->getUser()->id === $user->id) &&
+                ($event->getModel()->id === $this->getResponseContent($response)['data']['id']);
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventWithImageAsGlobalAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $image = Storage::disk('local')->get('/test-data/image.png');
+        $user = factory(User::class)->create()->makeGlobalAdmin();
+
+        Passport::actingAs($user);
+
+        $imageResponse = $this->json('POST', '/core/v1/files', [
+            'is_private' => false,
+            'mime_type' => 'image/png',
+            'file' => 'data:image/png;base64,' . base64_encode($image),
+        ]);
+
+        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -403,17 +472,17 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ];
 
         $response = $this->json('POST', '/core/v1/events', $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
-        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $response) {
-            return ($event->getAction() === Audit::ACTION_CREATE) &&
-                ($event->getUser()->id === $user->id) &&
-                ($event->getModel()->id === $this->getResponseContent($response)['data']['id']);
-        });
+        $organisationEventId = json_decode($response->getContent())->id;
+
+        $content = $this->get("/core/v1/events/{$organisationEventId}/image.png")->content();
+        $this->assertEquals($image, $content);
     }
 
     /**
@@ -479,7 +548,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -490,7 +559,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
         ]);
 
@@ -515,7 +584,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
             'fees_text' => null,
@@ -574,7 +643,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
             'fees_text' => null,
@@ -641,7 +710,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
             'fees_text' => null,
@@ -654,8 +723,8 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
             'booking_cta' => $this->faker->words(2, true),
-            'is_virtual' => false,
-            'location_id' => $location->id,
+            'is_virtual' => true,
+            'location_id' => null,
             'organisation_id' => $organisation->id,
         ];
 
@@ -710,7 +779,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $organisationEvent->end_date,
             'start_time' => $organisationEvent->start_time,
             'end_time' => $organisationEvent->end_time,
-            'summary' => $organisationEvent->summary,
+            'intro' => $organisationEvent->intro,
             'description' => $organisationEvent->description,
             'is_free' => $organisationEvent->is_free,
             'fees_text' => $organisationEvent->fees_text,
@@ -847,7 +916,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -923,7 +992,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -974,7 +1043,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
@@ -1025,7 +1094,7 @@ class OrganisationEventsTest extends TestCase
             'end_date' => $date,
             'start_time' => '09:00',
             'end_time' => '13:00',
-            'summary' => $this->faker->sentence,
+            'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
             'fees_text' => $this->faker->sentence,
