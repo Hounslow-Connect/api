@@ -4,7 +4,6 @@ namespace App\Http\Requests\OrganisationEvent;
 
 use App\Http\Requests\HasMissingValues;
 use App\Models\File;
-use App\Models\Organisation;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\MarkdownMaxLength;
@@ -152,7 +151,7 @@ class UpdateRequest extends FormRequest
             'fees_url.url' => $urlMessage,
             'organiser_url.url' => $urlMessage,
             'booking_url.url' => $urlMessage,
-            'organiser_email.email' => "Please enter an email address users can use to contact your event organiser.",
+            'organiser_email.email' => 'Please enter an email address users can use to contact your event organiser.',
         ];
     }
 }

@@ -3,12 +3,9 @@
 namespace App\Models;
 
 use App\Http\Requests\OrganisationEvent\UpdateRequest as UpdateOrganisationEventRequest;
-use App\Models\File;
-use App\Models\Model;
 use App\Models\Mutators\OrganisationEventMutators;
 use App\Models\Relationships\OrganisationEventRelationships;
 use App\Models\Scopes\OrganisationEventScopes;
-use App\Models\UpdateRequest;
 use App\Rules\FileIsMimeType;
 use App\UpdateRequest\AppliesUpdateRequests;
 use App\UpdateRequest\UpdateRequests;

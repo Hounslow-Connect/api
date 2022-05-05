@@ -7,10 +7,10 @@ use App\Models\OrganisationEvent;
 use Faker\Generator as Faker;
 
 $factory->define(OrganisationEvent::class, function (Faker $faker) {
-
     $date = $faker->dateTimeBetween('+1 week', '+6 weeks');
     $endtime = $faker->time('H:i:s');
     $starttime = $faker->time('H:i:s', $endtime);
+
     return [
         'title' => $faker->sentence(3),
         'start_date' => $date->format('Y-m-d'),
