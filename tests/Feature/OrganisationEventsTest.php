@@ -30,7 +30,7 @@ class OrganisationEventsTest extends TestCase
     {
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('GET', '/core/v1/events');
+        $response = $this->json('GET', '/core/v1/organisation-events');
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonCollection([
@@ -63,8 +63,8 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonFragment([
             'id' => $organisationEvent->id,
             'title' => $organisationEvent->title,
-            'start_date' => $organisationEvent->start_date,
-            'end_date' => $organisationEvent->end_date,
+            'start_date' => $organisationEvent->start_date->toDateString(),
+            'end_date' => $organisationEvent->end_date->toDateString(),
             'start_time' => $organisationEvent->start_time,
             'end_time' => $organisationEvent->end_time,
             'intro' => $organisationEvent->intro,
@@ -96,7 +96,7 @@ class OrganisationEventsTest extends TestCase
         $organisationEvent1 = factory(OrganisationEvent::class)->create();
         $organisationEvent2 = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('GET', "/core/v1/events?filter[organisation_id]={$organisationEvent1->organisation_id}");
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[organisation_id]={$organisationEvent1->organisation_id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent1->id]);
@@ -112,7 +112,7 @@ class OrganisationEventsTest extends TestCase
 
         $event = factory(OrganisationEvent::class)->create();
 
-        $this->json('GET', '/core/v1/events');
+        $this->json('GET', '/core/v1/organisation-events');
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) {
             return ($event->getAction() === Audit::ACTION_READ);
@@ -128,7 +128,7 @@ class OrganisationEventsTest extends TestCase
      */
     public function postCreateOrganisationEventAsGuest401()
     {
-        $response = $this->json('POST', '/core/v1/events');
+        $response = $this->json('POST', '/core/v1/organisation-events');
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -143,9 +143,9 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/events');
+        $response = $this->json('POST', '/core/v1/organisation-events');
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -158,9 +158,9 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/events');
+        $response = $this->json('POST', '/core/v1/organisation-events');
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -181,13 +181,13 @@ class OrganisationEventsTest extends TestCase
             'file' => 'data:image/png;base64,' . base64_encode($image),
         ]);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -207,41 +207,22 @@ class OrganisationEventsTest extends TestCase
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
+
+        unset($payload['image_file_id']);
+        $payload['has_image'] = true;
+
         $response->assertJsonFragment($payload);
 
-        $globalAdminUser = factory(User::class)->create()->makeGlobalAdmin();
+        $responseData = json_decode($response->getContent())->data;
 
-        $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
-            'user_id' => $user->id,
-            'updateable_type' => UpdateRequest::NEW_TYPE_EVENT,
-            'updateable_id' => null,
-        ]);
+        // The organisation event is created
+        $this->assertDatabaseHas((new OrganisationEvent())->getTable(), ['id' => $responseData->id]);
 
-        $data = UpdateRequest::query()
-            ->where('updateable_type', UpdateRequest::NEW_TYPE_EVENT)
-            ->where('updateable_id', null)
-            ->where('user_id', $user->id)
-            ->firstOrFail()->data;
-
-        $this->assertEquals($data, $payload);
-
-        // Simulate frontend check by making call with UpdateRequest ID.
-        $updateRequestId = json_decode($response->getContent())->id;
-
-        Passport::actingAs($globalAdminUser);
-
-        $updateRequestCheckResponse = $this->get(
-            route(
-                'core.v1.update-requests.show',
-                ['update_request' => $updateRequestId]
-            )
-        );
-
-        $updateRequestCheckResponse->assertSuccessful();
-        $this->assertEquals($data, $payload);
+        // And no update request was created
+        $this->assertEmpty(UpdateRequest::all());
     }
 
     /**
@@ -255,13 +236,13 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -280,13 +261,13 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $responseData = json_decode($response->getContent())->data;
 
-        // The service is created
+        // The organisation event is created
         $this->assertDatabaseHas((new OrganisationEvent())->getTable(), ['id' => $responseData->id]);
 
         // And no update request was created
@@ -304,13 +285,13 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -329,13 +310,13 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $responseData = json_decode($response->getContent())->data;
 
-        // The service is created
+        // The organisation event is created
         $this->assertDatabaseHas((new OrganisationEvent())->getTable(), ['id' => $responseData->id]);
 
         // And no update request was created
@@ -354,13 +335,13 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -379,9 +360,9 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation1->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -389,19 +370,21 @@ class OrganisationEventsTest extends TestCase
      */
     public function postCreateOrganisationEventCreatesAuditAsOrganisationAdmin201()
     {
+        $this->fakeEvents();
+
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
         $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -420,9 +403,9 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $response) {
             return ($event->getAction() === Audit::ACTION_CREATE) &&
@@ -449,13 +432,13 @@ class OrganisationEventsTest extends TestCase
             'file' => 'data:image/png;base64,' . base64_encode($image),
         ]);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -475,14 +458,55 @@ class OrganisationEventsTest extends TestCase
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
-        $organisationEventId = json_decode($response->getContent())->id;
+        $responseData = json_decode($response->getContent())->data;
 
-        $content = $this->get("/core/v1/events/{$organisationEventId}/image.png")->content();
+        $content = $this->get("/core/v1/organisation-events/{$responseData->id}/image.png")->content();
         $this->assertEquals($image, $content);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventMinimumFieldsAsOrganisationAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => true,
+            'fees_text' => null,
+            'fees_url' => null,
+            'organiser_name' => null,
+            'organiser_phone' => null,
+            'organiser_email' => null,
+            'organiser_url' => null,
+            'booking_title' => null,
+            'booking_summary' => null,
+            'booking_url' => null,
+            'booking_cta' => null,
+            'is_virtual' => true,
+            'location_id' => null,
+            'organisation_id' => $organisation->id,
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
+
+        $response->assertStatus(Response::HTTP_CREATED);
     }
 
     /**
@@ -496,69 +520,69 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
 
-        $response = $this->json('POST', '/core/v1/events', []);
+        $response = $this->json('POST', '/core/v1/organisation-events', []);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
-            'title' => $this->faker->sentence(3),
-            'start_date' => $date,
-        ]);
-
-        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
-
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
-            'end_date' => $date,
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->json('POST', '/core/v1/organisation-events', [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $response = $this->json('POST', '/core/v1/events', [
+        $response = $this->json('POST', '/core/v1/organisation-events', [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
         ]);
@@ -577,13 +601,13 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
@@ -602,27 +626,27 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $payload['is_free'] = false;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['fees_url'] = $this->faker->url;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['fees_text'] = $this->faker->sentence;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
     }
 
     /**
@@ -636,22 +660,22 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
             'fees_text' => null,
             'fees_url' => null,
             'organiser_name' => null,
-            'organiser_phone' => random_uk_phone(),
-            'organiser_email' => $this->faker->safeEmail,
-            'organiser_url' => $this->faker->url,
+            'organiser_phone' => null,
+            'organiser_email' => null,
+            'organiser_url' => null,
             'booking_title' => $this->faker->sentence(3),
             'booking_summary' => $this->faker->sentence,
             'booking_url' => $this->faker->url,
@@ -661,35 +685,35 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $payload['organiser_name'] = $this->faker->name;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['organiser_phone'] = random_uk_phone();
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $payload['organiser_phone'] = null;
         $payload['organiser_email'] = $this->faker->safeEmail;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $payload['organiser_email'] = null;
         $payload['organiser_url'] = $this->faker->url;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
     }
 
     /**
@@ -703,13 +727,13 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => true,
@@ -719,42 +743,42 @@ class OrganisationEventsTest extends TestCase
             'organiser_phone' => random_uk_phone(),
             'organiser_email' => $this->faker->safeEmail,
             'organiser_url' => $this->faker->url,
-            'booking_title' => $this->faker->sentence(3),
-            'booking_summary' => $this->faker->sentence,
-            'booking_url' => $this->faker->url,
-            'booking_cta' => $this->faker->words(2, true),
+            'booking_title' => null,
+            'booking_summary' => null,
+            'booking_url' => null,
+            'booking_cta' => null,
             'is_virtual' => true,
             'location_id' => null,
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
 
         $payload['booking_title'] = $this->faker->sentence(3);
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['booking_summary'] = $this->faker->sentence;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['booking_url'] = $this->faker->url;
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $payload['booking_cta'] = $this->faker->words(2, true);
 
-        $response = $this->json('POST', '/core/v1/events', $payload);
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_CREATED);
     }
 
     /**
@@ -768,15 +792,15 @@ class OrganisationEventsTest extends TestCase
     {
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('GET', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('GET', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
 
         $response->assertJsonFragment([
             'id' => $organisationEvent->id,
             'title' => $organisationEvent->title,
-            'start_date' => $organisationEvent->start_date,
-            'end_date' => $organisationEvent->end_date,
+            'start_date' => $organisationEvent->start_date->toDateString(),
+            'end_date' => $organisationEvent->end_date->toDateString(),
             'start_time' => $organisationEvent->start_time,
             'end_time' => $organisationEvent->end_time,
             'intro' => $organisationEvent->intro,
@@ -804,15 +828,17 @@ class OrganisationEventsTest extends TestCase
      */
     public function getSingleOrganisationEventAsGuestCreatesAudit200()
     {
+        $this->fakeEvents();
+
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('GET', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('GET', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($organisationEvent) {
             return ($event->getAction() === Audit::ACTION_READ) &&
-                ($event->getModel()->id === $event->id);
+                ($event->getModel()->id === $organisationEvent->id);
         });
     }
 
@@ -823,7 +849,7 @@ class OrganisationEventsTest extends TestCase
     {
         $organisationEvent = factory(OrganisationEvent::class)->states('withImage')->create();
 
-        $response = $this->get("/core/v1/events/{$organisationEvent->id}/image.png");
+        $response = $this->get("/core/v1/organisation-events/{$organisationEvent->id}/image.png");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertHeader('Content-Type', 'image/png');
@@ -838,7 +864,7 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->states('withImage')->create();
 
-        $response = $this->get("/core/v1/events/{$organisationEvent->id}/image.png");
+        $response = $this->get("/core/v1/organisation-events/{$organisationEvent->id}/image.png");
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($organisationEvent) {
             return ($event->getAction() === Audit::ACTION_READ) &&
@@ -857,7 +883,7 @@ class OrganisationEventsTest extends TestCase
     {
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -874,9 +900,9 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}");
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -891,9 +917,9 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}");
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -907,15 +933,17 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $organisationEvent = factory(OrganisationEvent::class)->create();
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -931,10 +959,9 @@ class OrganisationEventsTest extends TestCase
             'booking_cta' => $this->faker->words(2, true),
             'is_virtual' => false,
             'location_id' => $location->id,
-            'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
@@ -944,13 +971,13 @@ class OrganisationEventsTest extends TestCase
 
         $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
             'user_id' => $user->id,
-            'updateable_type' => UpdateRequest::EXISTING_TYPE_EVENT,
-            'updateable_id' => null,
+            'updateable_type' => UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT,
+            'updateable_id' => $organisationEvent->id,
         ]);
 
         $data = UpdateRequest::query()
-            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_EVENT)
-            ->where('updateable_id', null)
+            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT)
+            ->where('updateable_id', $organisationEvent->id)
             ->where('user_id', $user->id)
             ->firstOrFail()->data;
 
@@ -958,7 +985,6 @@ class OrganisationEventsTest extends TestCase
 
         // Simulate frontend check by making call with UpdateRequest ID.
         $updateRequestId = json_decode($response->getContent())->id;
-
         Passport::actingAs($globalAdminUser);
 
         $updateRequestCheckResponse = $this->get(
@@ -969,29 +995,27 @@ class OrganisationEventsTest extends TestCase
         );
 
         $updateRequestCheckResponse->assertSuccessful();
-        $this->assertEquals($data, $payload);
     }
 
     /**
      * @test
      */
-    public function putUpdateOrganisationEventAsGlobalAdmin200()
+    public function putUpdateOrganisationEventAutoApprovedAsGlobalAdmin200()
     {
-        $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
-        $user = factory(User::class)->create()->makeGlobalAdmin($organisation);
+        $user = factory(User::class)->create()->makeGlobalAdmin();
 
         Passport::actingAs($user);
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -1007,26 +1031,45 @@ class OrganisationEventsTest extends TestCase
             'booking_cta' => $this->faker->words(2, true),
             'is_virtual' => false,
             'location_id' => $location->id,
-            'organisation_id' => $organisation->id,
+            'image_file_id' => null,
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
-        $responseData = json_decode($response->getContent())->data;
-
-        // The service is updated
+        // The organisation event is updated
         $this->assertDatabaseHas((new OrganisationEvent())->getTable(), array_merge(['id' => $organisationEvent->id], $payload));
 
-        // And no update request was created
-        $this->assertEmpty(UpdateRequest::all());
+        $data = UpdateRequest::query()
+            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT)
+            ->where('updateable_id', $organisationEvent->id)
+            ->firstOrFail()
+            ->data;
+        $this->assertEquals($data, $payload);
+
+        // Simulate frontend check by making call with UpdateRequest ID.
+        $updateRequestId = json_decode($response->getContent())->id;
+        Passport::actingAs($user);
+
+        $updateRequestCheckResponse = $this->get(
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
+        );
+
+        $updateRequestCheckResponse->assertSuccessful();
+        $updateRequestResponseData = json_decode($updateRequestCheckResponse->getContent());
+
+        // Update request should already have been approved.
+        $this->assertNotNull($updateRequestResponseData->approved_at);
     }
 
     /**
      * @test
      */
-    public function putUpdateOrganisationEventAsSuperAdmin200()
+    public function putUpdateOrganisationEventAutoApprovedAsSuperAdmin200()
     {
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
@@ -1036,13 +1079,13 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -1058,20 +1101,38 @@ class OrganisationEventsTest extends TestCase
             'booking_cta' => $this->faker->words(2, true),
             'is_virtual' => false,
             'location_id' => $location->id,
-            'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
-        $responseData = json_decode($response->getContent())->data;
-
-        // The service is updated
+        // The organisation event is updated
         $this->assertDatabaseHas((new OrganisationEvent())->getTable(), array_merge(['id' => $organisationEvent->id], $payload));
 
-        // And no update request was created
-        $this->assertEmpty(UpdateRequest::all());
+        $data = UpdateRequest::query()
+            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT)
+            ->where('updateable_id', $organisationEvent->id)
+            ->firstOrFail()
+            ->data;
+        $this->assertEquals($data, $payload);
+
+        // Simulate frontend check by making call with UpdateRequest ID.
+        $updateRequestId = json_decode($response->getContent())->id;
+        Passport::actingAs($user);
+
+        $updateRequestCheckResponse = $this->get(
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
+        );
+
+        $updateRequestCheckResponse->assertSuccessful();
+        $updateRequestResponseData = json_decode($updateRequestCheckResponse->getContent());
+
+        // Update request should already have been approved.
+        $this->assertNotNull($updateRequestResponseData->approved_at);
     }
 
     /**
@@ -1079,21 +1140,25 @@ class OrganisationEventsTest extends TestCase
      */
     public function putUpdateOrganisationEventAsOrganisationAdminCreatesAudit200()
     {
+        $this->fakeEvents();
+
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
         $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
 
         Passport::actingAs($user);
 
-        $organisationEvent = factory(OrganisationEvent::class)->create();
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
 
-        $date = $this->faker->date('Y-m-d', '+6 weeks');
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
         $payload = [
             'title' => $this->faker->sentence(3),
             'start_date' => $date,
             'end_date' => $date,
-            'start_time' => '09:00',
-            'end_time' => '13:00',
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
             'intro' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
             'is_free' => false,
@@ -1112,7 +1177,7 @@ class OrganisationEventsTest extends TestCase
             'organisation_id' => $organisation->id,
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
@@ -1145,11 +1210,11 @@ class OrganisationEventsTest extends TestCase
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
-        $content = $this->get("/core/v1/events/{$organisationEvent->id}/image.png")->content();
+        $content = $this->get("/core/v1/organisation-events/{$organisationEvent->id}/image.png")->content();
         $this->assertEquals($image, $content);
     }
 
@@ -1168,7 +1233,7 @@ class OrganisationEventsTest extends TestCase
             'image_file_id' => null,
         ];
 
-        $response = $this->json('PUT', "/core/v1/events/{$organisationEvent->id}", $payload);
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
 
         $response->assertStatus(Response::HTTP_OK);
 
@@ -1187,7 +1252,7 @@ class OrganisationEventsTest extends TestCase
     {
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -1204,9 +1269,9 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -1221,9 +1286,9 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
-        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
 
     /**
@@ -1236,9 +1301,11 @@ class OrganisationEventsTest extends TestCase
 
         Passport::actingAs($user);
 
-        $organisationEvent = factory(OrganisationEvent::class)->create();
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new OrganisationEvent())->getTable(), ['id' => $organisationEvent->id]);
@@ -1256,7 +1323,7 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new OrganisationEvent())->getTable(), ['id' => $organisationEvent->id]);
@@ -1274,7 +1341,7 @@ class OrganisationEventsTest extends TestCase
 
         $organisationEvent = factory(OrganisationEvent::class)->create();
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new OrganisationEvent())->getTable(), ['id' => $organisationEvent->id]);
@@ -1285,14 +1352,18 @@ class OrganisationEventsTest extends TestCase
      */
     public function deleteRemoveOrganisationEventAsOrganisationAdminCreatesAudit200()
     {
+        $this->fakeEvents();
+
         $organisation = factory(Organisation::class)->create();
         $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
 
         Passport::actingAs($user);
 
-        $organisationEvent = factory(OrganisationEvent::class)->create();
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
 
-        $response = $this->json('DELETE', "/core/v1/events/{$organisationEvent->id}");
+        $response = $this->json('DELETE', "/core/v1/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
 

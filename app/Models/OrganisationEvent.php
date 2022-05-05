@@ -13,7 +13,9 @@ use App\Rules\FileIsMimeType;
 use App\UpdateRequest\AppliesUpdateRequests;
 use App\UpdateRequest\UpdateRequests;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
 
 class OrganisationEvent extends Model implements AppliesUpdateRequests
@@ -22,6 +24,30 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
     use OrganisationEventRelationships;
     use OrganisationEventScopes;
     use UpdateRequests;
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'is_free' => 'boolean',
+        'is_virtual' => 'boolean',
+        'start_time' => 'string',
+        'end_time' => 'string',
+    ];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = [
+        'start_date',
+        'end_date',
+        'created_at',
+        'updated_at',
+    ];
 
     /**
      * Check if the update request is valid.
@@ -93,6 +119,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
             'booking_summary' => Arr::get($data, 'booking_summary', $this->booking_summary),
             'booking_url' => Arr::get($data, 'booking_url', $this->booking_url),
             'booking_cta' => Arr::get($data, 'booking_cta', $this->booking_cta),
+            'is_virtual' => Arr::get($data, 'is_virtual', $this->is_virtual),
             'location_id' => Arr::get($data, 'location_id', $this->location_id),
             'image_file_id' => Arr::get($data, 'image_file_id', $this->image_file_id),
         ]);
@@ -138,5 +165,31 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
         }
 
         return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasImage(): bool
+    {
+        return $this->image_file_id !== null;
+    }
+
+    /**
+     * @param int|null $maxDimension
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException|\InvalidArgumentException
+     * @return \App\Models\File|\Illuminate\Http\Response|\Illuminate\Contracts\Support\Responsable
+     */
+    public static function placeholderImage(int $maxDimension = null)
+    {
+        if ($maxDimension !== null) {
+            return File::resizedPlaceholder($maxDimension, File::META_PLACEHOLDER_FOR_ORGANISATION_EVENT);
+        }
+
+        return response()->make(
+            Storage::disk('local')->get('/placeholders/service.png'),
+            Response::HTTP_OK,
+            ['Content-Type' => File::MIME_TYPE_PNG]
+        );
     }
 }

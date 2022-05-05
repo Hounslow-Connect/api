@@ -7,6 +7,7 @@ use App\Models\CollectionTaxonomy;
 use App\Models\File;
 use App\Models\Location;
 use App\Models\Organisation;
+use App\Models\OrganisationEvent;
 use App\Models\Referral;
 use App\Models\Report;
 use App\Models\Service;
@@ -56,6 +57,7 @@ class ModelServiceProvider extends ServiceProvider
             UpdateRequest::EXISTING_TYPE_SERVICE => Service::class,
             UpdateRequest::EXISTING_TYPE_SERVICE_LOCATION => ServiceLocation::class,
             UpdateRequest::EXISTING_TYPE_ORGANISATION => Organisation::class,
+            UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT => OrganisationEvent::class,
             UpdateRequest::EXISTING_TYPE_USER => User::class,
         ]);
     }

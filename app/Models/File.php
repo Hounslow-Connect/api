@@ -28,6 +28,7 @@ class File extends Model implements Responsable
     const META_TYPE_PENDING_ASSIGNMENT = 'pending_assignment';
 
     const META_PLACEHOLDER_FOR_ORGANISATION = 'organisation';
+    const META_PLACEHOLDER_FOR_ORGANISATION_EVENT = 'organisation_event';
     const META_PLACEHOLDER_FOR_SERVICE = 'service';
     const META_PLACEHOLDER_FOR_COLLECTION_CATEGORY = 'collection_category';
     const META_PLACEHOLDER_FOR_COLLECTION_PERSONA = 'collection_persona';
@@ -204,6 +205,7 @@ class File extends Model implements Responsable
         // Parameter validation.
         $validPlaceholdersFor = [
             static::META_PLACEHOLDER_FOR_ORGANISATION,
+            static::META_PLACEHOLDER_FOR_ORGANISATION_EVENT,
             static::META_PLACEHOLDER_FOR_SERVICE,
             static::META_PLACEHOLDER_FOR_COLLECTION_PERSONA,
             static::META_PLACEHOLDER_FOR_COLLECTION_CATEGORY,

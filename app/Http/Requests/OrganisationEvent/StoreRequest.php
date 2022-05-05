@@ -7,14 +7,14 @@ use App\Models\File;
 use App\Models\Organisation;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
+use App\Rules\IsOrganisationAdmin;
 use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
-use App\Rules\NullableIf;
 use App\Rules\UkPhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateRequest extends FormRequest
+class StoreRequest extends FormRequest
 {
     use HasMissingValues;
 
@@ -25,7 +25,7 @@ class UpdateRequest extends FormRequest
      */
     public function authorize()
     {
-        if ($this->user()->isOrganisationAdmin($this->organisation_event->organisation)) {
+        if ($this->user()->isOrganisationAdmin(Organisation::find($this->organisation_id))) {
             return true;
         }
 
@@ -40,22 +40,37 @@ class UpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => ['string', 'min:1', 'max:255'],
-            'start_date' => ['date_format:Y-m-d', 'after:today'],
-            'end_date' => ['date_format:Y-m-d', 'after_or_equal:start_date'],
-            'start_time' => ['date_format:H:i:s'],
-            'end_time' => ['date_format:H:i:s', 'after_or_equal:start_time'],
-            'intro' => ['string', 'min:1', 'max:300'],
+            'organisation_id' => ['required', 'exists:organisations,id', new IsOrganisationAdmin($this->user('api'))],
+            'title' => ['required', 'string', 'min:1', 'max:255'],
+            'start_date' => ['required', 'date_format:Y-m-d', 'after:today'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'start_time' => ['required', 'date_format:H:i:s'],
+            'end_time' => ['required', 'date_format:H:i:s', 'after_or_equal:start_time'],
+            'intro' => ['required', 'string', 'min:1', 'max:300'],
             'description' => [
+                'required',
                 'string',
                 new MarkdownMinLength(1),
                 new MarkdownMaxLength(3000, 'Description tab - The long description must be 3000 characters or fewer.'),
             ],
-            'is_free' => ['boolean'],
-            'fees_text' => ['nullable', 'string', 'min:1', 'max:255', 'required_if:is_free,false'],
-            'fees_url' => ['nullable', 'url', 'max:255'],
-            'organiser_name' => ['nullable', 'string', 'min:1', 'max:255', 'required_if:is_free,false'],
+            'is_free' => ['required', 'boolean'],
+            'fees_text' => [
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                'required_if:is_free,false',
+            ],
+            'fees_url' => [
+                'nullable',
+                'url',
+                'min:1',
+                'max:255',
+                'required_if:is_free,false',
+            ],
+            'organiser_name' => ['nullable', 'string', 'min:1', 'max:255'],
             'organiser_phone' => [
+                'nullable',
                 'string',
                 'min:1',
                 'max:255',
@@ -63,28 +78,21 @@ class UpdateRequest extends FormRequest
                 Rule::requiredIf(function () {
                     return !empty($this->organiser_name) && empty($this->organiser_email) && empty($this->organiser_url);
                 }),
-                new NullableIf(function () {
-                    return empty($this->organiser_name);
-                }),
             ],
             'organiser_email' => [
+                'nullable',
                 'email',
                 'max:255',
                 Rule::requiredIf(function () {
                     return !empty($this->organiser_name) && empty($this->organiser_phone) && empty($this->organiser_url);
                 }),
-                new NullableIf(function () {
-                    return empty($this->organiser_name);
-                }),
             ],
             'organiser_url' => [
+                'nullable',
                 'url',
                 'max:255',
                 Rule::requiredIf(function () {
                     return !empty($this->organiser_name) && empty($this->organiser_email) && empty($this->organiser_phone);
-                }),
-                new NullableIf(function () {
-                    return empty($this->organiser_name);
                 }),
             ],
             'booking_title' => [
@@ -115,11 +123,10 @@ class UpdateRequest extends FormRequest
                 'max:255',
                 'required_with:booking_summary,booking_url,booking_title',
             ],
-            'is_virtual' => ['boolean'],
+            'is_virtual' => ['required', 'boolean'],
             'location_id' => [
-                Rule::requiredIf(function () {
-                    return !empty($this->is_virtual) && $this->is_virtual == false;
-                }),
+                'nullable',
+                Rule::requiredIf(!$this->is_virtual),
                 'exists:locations,id',
             ],
             'image_file_id' => [
@@ -149,6 +156,7 @@ class UpdateRequest extends FormRequest
         $urlMessage = 'Please enter a valid web address in the correct format (starting with https:// or http://).';
 
         return [
+            'organisation_id.required' => 'Details tab - Please select the name of your organisation from the dropdown list.',
             'fees_url.url' => $urlMessage,
             'organiser_url.url' => $urlMessage,
             'booking_url.url' => $urlMessage,

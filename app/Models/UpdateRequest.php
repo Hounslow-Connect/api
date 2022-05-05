@@ -23,11 +23,12 @@ class UpdateRequest extends Model
     const EXISTING_TYPE_SERVICE = 'services';
     const EXISTING_TYPE_SERVICE_LOCATION = 'service_locations';
     const EXISTING_TYPE_ORGANISATION = 'organisations';
+    const EXISTING_TYPE_ORGANISATION_EVENT = 'organisation_events';
     const EXISTING_TYPE_USER = 'users';
 
     const NEW_TYPE_ORGANISATION_SIGN_UP_FORM = 'organisation_sign_up_form';
     const NEW_TYPE_SERVICE = 'new_service_created_by_org_admin';
-    const NEW_TYPE_EVENT = 'new_event_created_by_org_admin';
+    const NEW_TYPE_ORGANISATION_EVENT = 'new_organisation_event_created_by_org_admin';
 
     /**
      * The attributes that should be cast to native types.

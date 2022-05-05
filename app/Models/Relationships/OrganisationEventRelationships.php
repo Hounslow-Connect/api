@@ -2,6 +2,9 @@
 
 namespace App\Models\Relationships;
 
+use App\Models\Location;
+use App\Models\Organisation;
+
 trait OrganisationEventRelationships
 {
     /**
