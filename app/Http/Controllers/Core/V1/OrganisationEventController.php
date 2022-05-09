@@ -96,6 +96,10 @@ class OrganisationEventController extends Controller
                 'organisation_id' => $request->organisation_id,
             ]);
 
+            if ($request->filled('location_id')) {
+                $organisationEvent->load('location');
+            }
+
             if ($request->filled('image_file_id')) {
                 /** @var \App\Models\File $file */
                 $file = File::findOrFail($request->image_file_id)->assigned();
@@ -125,7 +129,7 @@ class OrganisationEventController extends Controller
             ->where('id', $organisationEvent->id);
 
         $organisationEvent = QueryBuilder::for($baseQuery)
-            ->allowedIncludes(['organisation'])
+            ->allowedIncludes(['organisation', 'location'])
             ->firstOrFail();
 
         event(EndpointHit::onRead($request, "Viewed Organisation Event [{$organisationEvent->id}]", $organisationEvent));

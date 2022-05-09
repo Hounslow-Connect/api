@@ -44,6 +44,7 @@ class OrganisationEventResource extends JsonResource
 
             // Relationships.
             'organisation' => new OrganisationResource($this->whenLoaded('organisation')),
+            'location' => new LocationResource($this->whenLoaded('location')),
         ];
     }
 }

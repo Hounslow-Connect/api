@@ -66,9 +66,16 @@ class StoreRequest extends FormRequest
                 'url',
                 'min:1',
                 'max:255',
-                'required_if:is_free,false',
             ],
-            'organiser_name' => ['nullable', 'string', 'min:1', 'max:255'],
+            'organiser_name' => [
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                Rule::requiredIf(function () {
+                    return !empty($this->organiser_phone) || !empty($this->organiser_email) || !empty($this->organiser_url);
+                }),
+            ],
             'organiser_phone' => [
                 'nullable',
                 'string',
@@ -132,7 +139,7 @@ class StoreRequest extends FormRequest
             'image_file_id' => [
                 'nullable',
                 'exists:files,id',
-                new FileIsMimeType(File::MIME_TYPE_PNG),
+                new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(),
             ],
         ];

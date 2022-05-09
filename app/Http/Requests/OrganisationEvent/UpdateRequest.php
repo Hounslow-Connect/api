@@ -53,7 +53,17 @@ class UpdateRequest extends FormRequest
             'is_free' => ['boolean'],
             'fees_text' => ['nullable', 'string', 'min:1', 'max:255', 'required_if:is_free,false'],
             'fees_url' => ['nullable', 'url', 'max:255'],
-            'organiser_name' => ['nullable', 'string', 'min:1', 'max:255', 'required_if:is_free,false'],
+            'organiser_name' => [
+                'string',
+                'min:1',
+                'max:255',
+                Rule::requiredIf(function () {
+                    return !empty($this->organiser_phone) || !empty($this->organiser_email) || !empty($this->organiser_url);
+                }),
+                new NullableIf(function () {
+                    return empty($this->organiser_phone) && empty($this->organiser_email) && empty($this->organiser_url);
+                }),
+            ],
             'organiser_phone' => [
                 'string',
                 'min:1',
