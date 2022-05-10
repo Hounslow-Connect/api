@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Core\V1;
 
 use App\Events\EndpointHit;
 use App\Http\Controllers\Controller;
+use App\Http\Filters\OrganisationEvent\EndsAfterFilter;
+use App\Http\Filters\OrganisationEvent\EndsBeforeFilter;
+use App\Http\Filters\OrganisationEvent\StartsAfterFilter;
+use App\Http\Filters\OrganisationEvent\StartsBeforeFilter;
 use App\Http\Requests\OrganisationEvent\DestroyRequest;
 use App\Http\Requests\OrganisationEvent\IndexRequest;
 use App\Http\Requests\OrganisationEvent\ShowRequest;
@@ -14,10 +18,10 @@ use App\Http\Responses\ResourceDeleted;
 use App\Http\Responses\UpdateRequestReceived;
 use App\Models\File;
 use App\Models\OrganisationEvent;
+use DateTime;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\Filter;
 use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\Sort;
 
 class OrganisationEventController extends Controller
 {
@@ -39,20 +43,26 @@ class OrganisationEventController extends Controller
     {
         $baseQuery = OrganisationEvent::query();
 
+        if (!$request->user()) {
+            Filter::custom('ends_after', EndsAfterFilter::class, 'end_date')->filter($baseQuery, (new DateTime('now'))->format('Y-m-d'));
+        }
+
         $organisationEvents = QueryBuilder::for($baseQuery)
             ->allowedFilters([
                 Filter::exact('id'),
                 Filter::exact('organisation_id'),
                 Filter::exact('homepage'),
                 'title',
-                Filter::custom('organisation_name', OrganisationNameFilter::class),
+                Filter::custom('starts_before', StartsBeforeFilter::class, 'start_date'),
+                Filter::custom('starts_after', StartsAfterFilter::class, 'start_date'),
+                Filter::custom('ends_before', EndsBeforeFilter::class, 'end_date'),
+                Filter::custom('ends_after', EndsAfterFilter::class, 'end_date'),
             ])
             ->allowedIncludes(['organisation'])
             ->allowedSorts([
                 'start_date',
                 'end_date',
                 'title',
-                Sort::custom('organisation_name', OrganisationNameSort::class),
             ])
             ->defaultSort('-start_date')
             ->paginate(per_page($request->per_page));

@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\UpdateRequest;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use DateTime;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -116,6 +117,86 @@ class OrganisationEventsTest extends TestCase
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent1->id]);
         $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function getAllOrganisationEventsOnlyPastEventsHomepageAsGuest200()
+    {
+        $future = $this->faker->dateTimeBetween('+1 week', '+3 weeks')->format('Y-m-d');
+        $past = $this->faker->dateTimeBetween('-1 week', '-1 day')->format('Y-m-d');
+        $today = (new DateTime('now'))->format('Y-m-d');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $future,
+            'end_date' => $future,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $past,
+            'end_date' => $past,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $today,
+            'end_date' => $today,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function getAllOrganisationEventsOnlyPastEventsAsOrganisationAdmin200()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $future = $this->faker->dateTimeBetween('+1 week', '+3 weeks')->format('Y-m-d');
+        $past = $this->faker->dateTimeBetween('-1 week', 'now')->format('Y-m-d');
+        $today = (new DateTime('now'))->format('Y-m-d');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $future,
+            'end_date' => $future,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $past,
+            'end_date' => $past,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $today,
+            'end_date' => $today,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
     }
 
     /**
