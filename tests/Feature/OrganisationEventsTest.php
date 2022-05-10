@@ -122,7 +122,7 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
-    public function getAllOrganisationEventsOnlyPastEventsHomepageAsGuest200()
+    public function getAllOrganisationEventsOnlyPastEventsAsGuest200()
     {
         $future = $this->faker->dateTimeBetween('+1 week', '+3 weeks')->format('Y-m-d');
         $past = $this->faker->dateTimeBetween('-1 week', '-1 day')->format('Y-m-d');
@@ -197,6 +197,60 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonFragment(['id' => $organisationEvent1->id]);
         $response->assertJsonFragment(['id' => $organisationEvent2->id]);
         $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function getAllOrganisationEventsFilterByDatesAsGuest200()
+    {
+        $date1 = $this->faker->dateTimeBetween('+2 days', '+1 weeks');
+        $date2 = $this->faker->dateTimeBetween('+2 week', '+3 weeks');
+        $date3 = (new DateTime('now'));
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date1->format('Y-m-d'),
+            'end_date' => $date1->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date2->format('Y-m-d'),
+            'end_date' => $date2->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date3->format('Y-m-d'),
+            'end_date' => $date3->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $from = $date1->modify('-1 day')->format('Y-m-d');
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[ends_after]={$from}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+
+        $to = $date1->modify('+1 day')->format('Y-m-d');
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[ends_before]={$to}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[ends_after]={$from}&filter[ends_before]={$to}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
     }
 
     /**
