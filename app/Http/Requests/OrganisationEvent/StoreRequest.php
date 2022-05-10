@@ -178,7 +178,7 @@ class StoreRequest extends FormRequest
         $urlMessage = 'Please enter a valid web address in the correct format (starting with https:// or http://).';
 
         return [
-            'organisation_id.required' => 'Details tab - Please select the name of your organisation from the dropdown list.',
+            'organisation_id.required' => 'Please select the name of your organisation from the dropdown list.',
             'fees_url.url' => $urlMessage,
             'organiser_url.url' => $urlMessage,
             'booking_url.url' => $urlMessage,
