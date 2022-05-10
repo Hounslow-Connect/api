@@ -30,6 +30,7 @@ $factory->define(OrganisationEvent::class, function (Faker $faker) {
         'booking_summary' => null,
         'booking_url' => null,
         'booking_cta' => null,
+        'homepage' => false,
         'is_virtual' => true,
         'location_id' => null,
         'organisation_id' => function () {
@@ -79,5 +80,11 @@ $factory->state(OrganisationEvent::class, 'withImage', function (Faker $faker) {
         'image_file_id' => function () {
             return factory(File::class)->states('image-png')->create()->id;
         },
+    ];
+});
+
+$factory->state(OrganisationEvent::class, 'homepage', function (Faker $faker) {
+    return [
+        'homepage' => true,
     ];
 });

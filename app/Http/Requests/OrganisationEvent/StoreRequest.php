@@ -5,12 +5,15 @@ namespace App\Http\Requests\OrganisationEvent;
 use App\Http\Requests\HasMissingValues;
 use App\Models\File;
 use App\Models\Organisation;
+use App\Models\Role;
+use App\Models\UserRole;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\IsOrganisationAdmin;
 use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
 use App\Rules\UkPhoneNumber;
+use App\Rules\UserHasRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -129,6 +132,18 @@ class StoreRequest extends FormRequest
                 'min:1',
                 'max:255',
                 'required_with:booking_summary,booking_url,booking_title',
+            ],
+            'homepage' => [
+                'required',
+                'boolean',
+                new UserHasRole(
+                    $this->user('api'),
+                    new UserRole([
+                        'user_id' => $this->user('api')->id,
+                        'role_id' => Role::globalAdmin()->id,
+                    ]),
+                    false
+                ),
             ],
             'is_virtual' => ['required', 'boolean'],
             'location_id' => [

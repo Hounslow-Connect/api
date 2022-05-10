@@ -30,6 +30,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
     protected $casts = [
         'is_free' => 'boolean',
         'is_virtual' => 'boolean',
+        'homepage' => 'boolean',
         'start_time' => 'string',
         'end_time' => 'string',
     ];
@@ -116,6 +117,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
             'booking_summary' => Arr::get($data, 'booking_summary', $this->booking_summary),
             'booking_url' => Arr::get($data, 'booking_url', $this->booking_url),
             'booking_cta' => Arr::get($data, 'booking_cta', $this->booking_cta),
+            'homepage' => Arr::get($data, 'homepage', $this->homepage),
             'is_virtual' => Arr::get($data, 'is_virtual', $this->is_virtual),
             'location_id' => Arr::get($data, 'location_id', $this->location_id),
             'image_file_id' => Arr::get($data, 'image_file_id', $this->image_file_id),
@@ -188,5 +190,29 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
             Response::HTTP_OK,
             ['Content-Type' => File::MIME_TYPE_PNG]
         );
+    }
+
+    /**
+     * Add the OrganisationEvent to the homepage.
+     *
+     * @return \App\Models\OrganisationEvent
+     */
+    public function addToHomepage()
+    {
+        $this->homepage = true;
+
+        return $this;
+    }
+
+    /**
+     * Remove the OrganisationEvent from the homepage.
+     *
+     * @return \App\Models\OrganisationEvent
+     */
+    public function removeFromHomepage()
+    {
+        $this->homepage = false;
+
+        return $this;
     }
 }

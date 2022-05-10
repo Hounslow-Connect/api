@@ -43,6 +43,7 @@ class OrganisationEventController extends Controller
             ->allowedFilters([
                 Filter::exact('id'),
                 Filter::exact('organisation_id'),
+                Filter::exact('homepage'),
                 'title',
                 Filter::custom('organisation_name', OrganisationNameFilter::class),
             ])
@@ -90,6 +91,7 @@ class OrganisationEventController extends Controller
                 'booking_summary' => $request->booking_summary,
                 'booking_url' => $request->booking_url,
                 'booking_cta' => $request->booking_cta,
+                'homepage' => $request->homepage,
                 'is_virtual' => $request->is_virtual,
                 'location_id' => $request->location_id,
                 'image_file_id' => $request->image_file_id,
@@ -168,6 +170,7 @@ class OrganisationEventController extends Controller
                 'booking_summary' => $request->missing('booking_summary'),
                 'booking_url' => $request->missing('booking_url'),
                 'booking_cta' => $request->missing('booking_cta'),
+                'homepage' => $request->missing('homepage'),
                 'is_virtual' => $request->missing('is_virtual'),
                 'location_id' => $request->missing('location_id'),
                 'image_file_id' => $request->missing('image_file_id'),

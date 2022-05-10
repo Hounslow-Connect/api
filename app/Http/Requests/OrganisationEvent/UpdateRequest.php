@@ -4,12 +4,15 @@ namespace App\Http\Requests\OrganisationEvent;
 
 use App\Http\Requests\HasMissingValues;
 use App\Models\File;
+use App\Models\Role;
+use App\Models\UserRole;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
 use App\Rules\NullableIf;
 use App\Rules\UkPhoneNumber;
+use App\Rules\UserHasRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -123,6 +126,17 @@ class UpdateRequest extends FormRequest
                 'min:1',
                 'max:255',
                 'required_with:booking_summary,booking_url,booking_title',
+            ],
+            'homepage' => [
+                'boolean',
+                new UserHasRole(
+                    $this->user('api'),
+                    new UserRole([
+                        'user_id' => $this->user('api')->id,
+                        'role_id' => Role::globalAdmin()->id,
+                    ]),
+                    $this->organisation_event->homepage
+                ),
             ],
             'is_virtual' => ['boolean'],
             'location_id' => [

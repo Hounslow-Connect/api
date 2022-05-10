@@ -36,6 +36,7 @@ class OrganisationEventResource extends JsonResource
             'booking_summary' => $this->booking_summary,
             'booking_url' => $this->booking_url,
             'booking_cta' => $this->booking_cta,
+            'homepage' => $this->homepage,
             'is_virtual' => $this->is_virtual,
             'location_id' => $this->location_id,
             'organisation_id' => $this->organisation_id,
