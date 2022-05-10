@@ -50,6 +50,7 @@ class UpdateOrganisationEventSchema extends Schema
                     ->nullable(),
                 Schema::string('booking_cta')
                     ->nullable(),
+                Schema::boolean('homepage'),
                 Schema::boolean('is_virtual'),
                 Schema::string('image_file_id')
                     ->format(Schema::FORMAT_UUID)

@@ -53,6 +53,7 @@ class OrganisationEventSchema extends Schema
                 Schema::string('booking_cta')
                     ->nullable(),
                 Schema::boolean('has_image'),
+                Schema::boolean('homepage'),
                 Schema::boolean('is_virtual'),
                 Schema::string('created_at')
                     ->format(Schema::FORMAT_DATE_TIME)
