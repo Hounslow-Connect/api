@@ -2,11 +2,15 @@
 
 namespace App\Docs\Operations\OrganisationEvents;
 
+use App\Docs\Parameters\EndsAfterParameter;
+use App\Docs\Parameters\EndsBeforeParameter;
 use App\Docs\Parameters\FilterIdParameter;
 use App\Docs\Parameters\FilterParameter;
 use App\Docs\Parameters\IncludeParameter;
 use App\Docs\Parameters\PageParameter;
 use App\Docs\Parameters\PerPageParameter;
+use App\Docs\Parameters\StartsAfterParameter;
+use App\Docs\Parameters\StartsBeforeParameter;
 use App\Docs\Schemas\OrganisationEvent\OrganisationEventSchema;
 use App\Docs\Schemas\PaginationSchema;
 use App\Docs\Tags\OrganisationEventsTag;
@@ -43,7 +47,11 @@ EOT
                 PageParameter::create(),
                 PerPageParameter::create(),
                 FilterIdParameter::create(),
-                FilterParameter::create(null, 'organisation_id')
+                StartsBeforeParameter::create(),
+                StartsAfterParameter::create(),
+                EndsBeforeParameter::create(),
+                EndsAfterParameter::create(),
+                FilterParameter::create(null,'organisation_id')
                     ->description('Comma separated list of organisation IDs to filter by')
                     ->schema(
                         Schema::array()->items(
@@ -51,12 +59,12 @@ EOT
                         )
                     )
                     ->style(FilterParameter::STYLE_SIMPLE),
-                IncludeParameter::create(null, ['organisation'])
+                IncludeParameter::create(null,['organisation'])
             )
             ->responses(
                 Response::ok()->content(
                     MediaType::json()->schema(
-                        PaginationSchema::create(null, OrganisationEventSchema::create())
+                        PaginationSchema::create(null,OrganisationEventSchema::create())
                     )
                 )
             );
