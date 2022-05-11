@@ -51,7 +51,7 @@ EOT
                 StartsAfterParameter::create(),
                 EndsBeforeParameter::create(),
                 EndsAfterParameter::create(),
-                FilterParameter::create(null,'organisation_id')
+                FilterParameter::create(null, 'organisation_id')
                     ->description('Comma separated list of organisation IDs to filter by')
                     ->schema(
                         Schema::array()->items(
@@ -59,12 +59,12 @@ EOT
                         )
                     )
                     ->style(FilterParameter::STYLE_SIMPLE),
-                IncludeParameter::create(null,['organisation'])
+                IncludeParameter::create(null, ['organisation'])
             )
             ->responses(
                 Response::ok()->content(
                     MediaType::json()->schema(
-                        PaginationSchema::create(null,OrganisationEventSchema::create())
+                        PaginationSchema::create(null, OrganisationEventSchema::create())
                     )
                 )
             );
