@@ -181,6 +181,18 @@ Route::prefix('/core/v1')
                     'destroy' => 'taxonomy-organisations.destroy',
                 ]);
 
+            // Taxonomy Organisation Events.
+            Route::match(['GET', 'POST'], '/taxonomies/organisation-events/index', 'TaxonomyOrganisationEventController@index');
+            Route::apiResource('/taxonomies/organisation-events', 'TaxonomyOrganisationEventController')
+                ->parameter('organisation-events', 'taxonomy')
+                ->names([
+                    'index' => 'taxonomy-organisation-events.index',
+                    'store' => 'taxonomy-organisation-events.store',
+                    'show' => 'taxonomy-organisation-events.show',
+                    'update' => 'taxonomy-organisation-events.update',
+                    'destroy' => 'taxonomy-organisation-events.destroy',
+                ]);
+
             // Taxonomy Service Eligibility.
             Route::get('/taxonomies/service-eligibilities', 'TaxonomyServiceEligibilityController@index');
             Route::apiResource('/taxonomies/service-eligibilities', 'TaxonomyServiceEligibilityController')

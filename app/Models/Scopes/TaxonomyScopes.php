@@ -28,6 +28,15 @@ trait TaxonomyScopes
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
+    public function scopeTopLevelOrganisationEvents(Builder $query): Builder
+    {
+        return $query->where('parent_id', static::organisationEvent()->id);
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
     public function scopeTopLevelServiceEligibilities(Builder $query): Builder
     {
         return $query->where('parent_id', static::serviceEligibility()->id);
