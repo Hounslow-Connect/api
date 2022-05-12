@@ -6,12 +6,14 @@ use App\Http\Requests\HasMissingValues;
 use App\Models\File;
 use App\Models\Organisation;
 use App\Models\Role;
+use App\Models\Taxonomy;
 use App\Models\UserRole;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\IsOrganisationAdmin;
 use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
+use App\Rules\RootTaxonomyIs;
 use App\Rules\UkPhoneNumber;
 use App\Rules\UserHasRole;
 use Illuminate\Foundation\Http\FormRequest;
@@ -157,6 +159,19 @@ class StoreRequest extends FormRequest
                 new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(),
             ],
+            'category_taxonomies' => [
+                'present',
+                'array',
+                new UserHasRole(
+                    $this->user('api'),
+                    new UserRole([
+                        'user_id' => $this->user('api')->id,
+                        'role_id' => Role::globalAdmin()->id,
+                    ]),
+                    []
+                ),
+            ],
+            'category_taxonomies.*' => ['exists:taxonomies,id', new RootTaxonomyIs(Taxonomy::NAME_CATEGORY)],
         ];
     }
 

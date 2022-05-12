@@ -105,6 +105,17 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Delete all the collection organisation events and pivot records.
+     */
+    protected function truncateCollectionOrganisationEvents()
+    {
+        Collection::organisationEvents()->get()->each(function (Collection $collection) {
+            $collection->collectionTaxonomies()->delete();
+        });
+        Collection::organisationEvents()->delete();
+    }
+
+    /**
      * Delete all the category taxonomy records.
      */
     protected function truncateTaxonomies()

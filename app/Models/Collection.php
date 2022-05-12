@@ -17,6 +17,7 @@ class Collection extends Model
 
     const TYPE_CATEGORY = 'category';
     const TYPE_PERSONA = 'persona';
+    const TYPE_ORGANISATION_EVENT = 'organisation-event';
 
     /**
      * Attributes that need to be cast to native types.
@@ -85,6 +86,24 @@ class Collection extends Model
 
         return response()->make(
             Storage::disk('local')->get('/placeholders/collection_category.png'),
+            Response::HTTP_OK,
+            ['Content-Type' => File::MIME_TYPE_PNG]
+        );
+    }
+
+    /**
+     * @param int|null $maxDimension
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException|\InvalidArgumentException
+     * @return \App\Models\File|\Illuminate\Http\Response|\Illuminate\Contracts\Support\Responsable
+     */
+    public static function organisationEventPlaceholderLogo(int $maxDimension = null)
+    {
+        if ($maxDimension !== null) {
+            return File::resizedPlaceholder($maxDimension, File::META_PLACEHOLDER_FOR_ORGANISATION_EVENT);
+        }
+
+        return response()->make(
+            Storage::disk('local')->get('/placeholders/organisation_event.png'),
             Response::HTTP_OK,
             ['Content-Type' => File::MIME_TYPE_PNG]
         );

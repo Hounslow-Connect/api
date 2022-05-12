@@ -32,6 +32,17 @@ trait CollectionScopes
     }
 
     /**
+     * Get only organisation-event collections.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOrganisationEvents(Builder $query): Builder
+    {
+        return $query->where('type', Collection::TYPE_ORGANISATION_EVENT);
+    }
+
+    /**
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param \App\Models\Collection $collection
      * @return \Illuminate\Database\Eloquent\Builder

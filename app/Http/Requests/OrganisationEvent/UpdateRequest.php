@@ -5,12 +5,15 @@ namespace App\Http\Requests\OrganisationEvent;
 use App\Http\Requests\HasMissingValues;
 use App\Models\File;
 use App\Models\Role;
+use App\Models\Taxonomy;
 use App\Models\UserRole;
+use App\Rules\CanUpdateCategoryTaxonomyRelationships;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
 use App\Rules\NullableIf;
+use App\Rules\RootTaxonomyIs;
 use App\Rules\UkPhoneNumber;
 use App\Rules\UserHasRole;
 use Illuminate\Foundation\Http\FormRequest;
@@ -150,6 +153,14 @@ class UpdateRequest extends FormRequest
                 'exists:files,id',
                 new FileIsMimeType(File::MIME_TYPE_PNG),
                 new FileIsPendingAssignment(),
+            ],
+            'category_taxonomies' => [
+                'array',
+                new CanUpdateCategoryTaxonomyRelationships($this->user('api'), $this->organisation_event),
+            ],
+            'category_taxonomies.*' => [
+                'exists:taxonomies,id',
+                new RootTaxonomyIs(Taxonomy::NAME_CATEGORY),
             ],
         ];
     }

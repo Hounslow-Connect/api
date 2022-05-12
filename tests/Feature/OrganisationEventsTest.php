@@ -7,7 +7,9 @@ use App\Models\Audit;
 use App\Models\Location;
 use App\Models\Organisation;
 use App\Models\OrganisationEvent;
+use App\Models\OrganisationEventTaxonomy;
 use App\Models\Service;
+use App\Models\Taxonomy;
 use App\Models\UpdateRequest;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -57,6 +59,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual',
             'location_id',
             'organisation_id',
+            'category_taxonomies',
             'created_at',
             'updated_at',
         ]);
@@ -84,6 +87,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => $organisationEvent->is_virtual,
             'location_id' => $organisationEvent->location_id,
             'organisation_id' => $organisationEvent->organisation_id,
+            'category_taxonomies' => [],
             'created_at' => $organisationEvent->created_at->format(CarbonImmutable::ISO8601),
             'updated_at' => $organisationEvent->updated_at->format(CarbonImmutable::ISO8601),
         ]);
@@ -356,6 +360,7 @@ class OrganisationEventsTest extends TestCase
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -411,6 +416,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -461,6 +467,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -512,6 +519,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation1->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -554,6 +562,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -596,6 +605,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -606,6 +616,123 @@ class OrganisationEventsTest extends TestCase
         $payload['has_image'] = false;
 
         $response->assertJsonFragment($payload);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventWithTaxonomiesAsOrganisationAdmin422()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $taxonomy = factory(Taxonomy::class)->states('lga-standards')->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'homepage' => true,
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+            'category_taxonomies' => [$taxonomy->id],
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @test
+     */
+    public function postCreateOrganisationEventWithTaxonomiesAsGlobalAdmin201()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $taxonomy = factory(Taxonomy::class)->states('lga-standards')->create();
+        $user = factory(User::class)->create()->makeGlobalAdmin();
+
+        Passport::actingAs($user);
+
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'homepage' => true,
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+            'category_taxonomies' => [$taxonomy->id],
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
+
+        $response->assertStatus(Response::HTTP_CREATED);
+
+        $organisationEvent = OrganisationEvent::findOrFail($response->json('data.id'));
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy->id,
+        ]);
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy->parent_id,
+        ]);
+
+        $responsePayload = $payload;
+        $responsePayload['category_taxonomies'] = [
+            [
+                'id' => $taxonomy->parent->id,
+                'parent_id' => $taxonomy->parent->parent_id,
+                'name' => $taxonomy->parent->name,
+                'created_at' => $taxonomy->parent->created_at->format(CarbonImmutable::ISO8601),
+                'updated_at' => $taxonomy->parent->updated_at->format(CarbonImmutable::ISO8601),
+            ],
+            [
+                'id' => $taxonomy->id,
+                'parent_id' => $taxonomy->parent_id,
+                'name' => $taxonomy->name,
+                'created_at' => $taxonomy->created_at->format(CarbonImmutable::ISO8601),
+                'updated_at' => $taxonomy->updated_at->format(CarbonImmutable::ISO8601),
+            ],
+        ];
+        $response->assertJsonFragment($responsePayload);
     }
 
     /**
@@ -645,6 +772,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => true,
             'location_id' => null,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -701,6 +829,7 @@ class OrganisationEventsTest extends TestCase
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -748,6 +877,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => true,
             'location_id' => null,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -871,6 +1001,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -931,6 +1062,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -999,6 +1131,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => true,
             'location_id' => null,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('POST', '/core/v1/organisation-events', $payload);
@@ -1067,6 +1200,7 @@ class OrganisationEventsTest extends TestCase
             'booking_cta' => $organisationEvent->booking_cta,
             'location_id' => $organisationEvent->location_id,
             'organisation_id' => $organisationEvent->organisation_id,
+            'category_taxonomies' => [],
             'created_at' => $organisationEvent->created_at->format(CarbonImmutable::ISO8601),
             'updated_at' => $organisationEvent->updated_at->format(CarbonImmutable::ISO8601),
         ]);
@@ -1209,6 +1343,7 @@ class OrganisationEventsTest extends TestCase
             'homepage' => false,
             'is_virtual' => false,
             'location_id' => $location->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
@@ -1428,6 +1563,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => false,
             'location_id' => $location->id,
             'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
@@ -1533,6 +1669,7 @@ class OrganisationEventsTest extends TestCase
             'homepage' => false,
             'is_virtual' => false,
             'location_id' => $location->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
@@ -1578,6 +1715,7 @@ class OrganisationEventsTest extends TestCase
             'homepage' => true,
             'is_virtual' => false,
             'location_id' => $location->id,
+            'category_taxonomies' => [],
         ];
 
         $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
@@ -1588,7 +1726,7 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
-    public function putUpdateOrganisationEventAddToHomepageAsGlobalAdmin403()
+    public function putUpdateOrganisationEventAddToHomepageAsGlobalAdmin200()
     {
         $organisation = factory(Organisation::class)->create();
         $location = factory(Location::class)->create();
@@ -1655,6 +1793,186 @@ class OrganisationEventsTest extends TestCase
 
         // Update request should already have been approved.
         $this->assertTrue($updateRequestResponseData->data->homepage);
+    }
+
+    /**
+     * @test
+     */
+    public function putUpdateOrganisationEventUpdateTaxonomiesAsOrganisationAdmin200()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        Passport::actingAs($user);
+
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
+
+        $taxonomy1 = factory(Taxonomy::class)->create();
+        $taxonomy2 = factory(Taxonomy::class)->create();
+        $organisationEvent->syncTaxonomyRelationships(collect([$taxonomy1]));
+
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy1->id,
+        ]);
+
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'homepage' => false,
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'category_taxonomies' => [$taxonomy1->id, $taxonomy2->id],
+        ];
+
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['data' => $payload]);
+        $response->assertJsonFragment(['message' => __('updates.pending')]);
+        $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
+            'user_id' => $user->id,
+            'updateable_type' => UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT,
+            'updateable_id' => $organisationEvent->id,
+        ]);
+
+        $data = UpdateRequest::query()
+            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT)
+            ->where('updateable_id', $organisationEvent->id)
+            ->firstOrFail()->data;
+        $this->assertEquals($data, $payload);
+
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy1->id,
+        ]);
+        $this->assertDatabaseMissing(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy2->id,
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function putUpdateOrganisationEventUpdateTaxonomiesAsGlobalAdmin200()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $user = factory(User::class)->create()->makeGlobalAdmin();
+
+        Passport::actingAs($user);
+
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation->id,
+        ]);
+
+        $taxonomy1 = factory(Taxonomy::class)->create();
+        $taxonomy2 = factory(Taxonomy::class)->create();
+        $taxonomy3 = factory(Taxonomy::class)->create();
+        $organisationEvent->syncTaxonomyRelationships(collect([$taxonomy1]));
+
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy1->id,
+        ]);
+
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'homepage' => false,
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'category_taxonomies' => [$taxonomy2->id, $taxonomy3->id],
+        ];
+
+        $response = $this->json('PUT', "/core/v1/organisation-events/{$organisationEvent->id}", $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $response->assertJsonFragment(['data' => $payload]);
+        $response->assertJsonFragment(['message' => __('updates.pre-approved')]);
+
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy2->id,
+        ]);
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy3->id,
+        ]);
+        $this->assertDatabaseHas(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy2->parent_id,
+        ]);
+        $this->assertDatabaseMissing(table(OrganisationEventTaxonomy::class), [
+            'organisation_event_id' => $organisationEvent->id,
+            'taxonomy_id' => $taxonomy1->id,
+        ]);
+
+        $responsePayload = $payload;
+        $responsePayload['category_taxonomies'] = [
+            [
+                'id' => $taxonomy2->parent->id,
+                'parent_id' => $taxonomy2->parent->parent_id,
+                'name' => $taxonomy2->parent->name,
+                'created_at' => $taxonomy2->parent->created_at->format(CarbonImmutable::ISO8601),
+                'updated_at' => $taxonomy2->parent->updated_at->format(CarbonImmutable::ISO8601),
+            ],
+            [
+                'id' => $taxonomy2->id,
+                'parent_id' => $taxonomy2->parent_id,
+                'name' => $taxonomy2->name,
+                'created_at' => $taxonomy2->created_at->format(CarbonImmutable::ISO8601),
+                'updated_at' => $taxonomy2->updated_at->format(CarbonImmutable::ISO8601),
+            ],
+            [
+                'id' => $taxonomy3->id,
+                'parent_id' => $taxonomy3->parent_id,
+                'name' => $taxonomy3->name,
+                'created_at' => $taxonomy3->created_at->format(CarbonImmutable::ISO8601),
+                'updated_at' => $taxonomy3->updated_at->format(CarbonImmutable::ISO8601),
+            ],
+        ];
+        $response = $this->json('GET', "/core/v1/organisation-events/{$organisationEvent->id}");
+        $response->assertJsonFragment($responsePayload);
     }
 
     /**

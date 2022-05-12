@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Models\Organisation;
+use App\Models\OrganisationEvent;
 use App\Models\Service;
 use App\Models\Taxonomy;
 use App\Models\User;
@@ -55,9 +56,9 @@ class CanUpdateCategoryTaxonomyRelationships implements Rule
         }
 
         // Allow changing of taxonomies if global admin.
-        if (
-            ($this->model instanceof Service && $this->user->isGlobalAdmin())
+        if (($this->model instanceof Service && $this->user->isGlobalAdmin())
             || ($this->model instanceof Organisation && $this->user->isOrganisationAdmin($this->model))
+            || ($this->model instanceof OrganisationEvent && $this->user->isOrganisationAdmin($this->model->organisation))
         ) {
             return true;
         }

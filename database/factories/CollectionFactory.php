@@ -29,3 +29,14 @@ $factory->state(Collection::class, 'typePersona', function (Faker $faker) {
         ],
     ];
 });
+
+$factory->state(Collection::class, 'typeOrganisationEvent', function (Faker $faker) {
+    return [
+        'type' => Collection::TYPE_ORGANISATION_EVENT,
+        'meta' => [
+            'intro' => $faker->sentence,
+            'subtitle' => $faker->sentence,
+            'sideboxes' => [],
+        ],
+    ];
+});

@@ -7,6 +7,8 @@ use App\Models\Mutators\OrganisationEventMutators;
 use App\Models\Relationships\OrganisationEventRelationships;
 use App\Models\Scopes\OrganisationEventScopes;
 use App\Rules\FileIsMimeType;
+use App\TaxonomyRelationships\HasTaxonomyRelationships;
+use App\TaxonomyRelationships\UpdateTaxonomyRelationships;
 use App\UpdateRequest\AppliesUpdateRequests;
 use App\UpdateRequest\UpdateRequests;
 use Illuminate\Contracts\Validation\Validator;
@@ -15,12 +17,13 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
 
-class OrganisationEvent extends Model implements AppliesUpdateRequests
+class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxonomyRelationships
 {
     use OrganisationEventMutators;
     use OrganisationEventRelationships;
     use OrganisationEventScopes;
     use UpdateRequests;
+    use UpdateTaxonomyRelationships;
 
     /**
      * The attributes that should be cast to native types.
@@ -122,6 +125,12 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests
             'location_id' => Arr::get($data, 'location_id', $this->location_id),
             'image_file_id' => Arr::get($data, 'image_file_id', $this->image_file_id),
         ]);
+
+        // Update the category taxonomy records.
+        if (array_key_exists('category_taxonomies', $data)) {
+            $taxonomies = Taxonomy::whereIn('id', $data['category_taxonomies'])->get();
+            $this->syncTaxonomyRelationships($taxonomies);
+        }
 
         // Ensure conditional fields are reset if needed.
         $this->resetConditionalFields();
