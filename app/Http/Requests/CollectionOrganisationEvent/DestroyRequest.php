@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests\TaxonomyOrganisationEvent;
+namespace App\Http\Requests\CollectionOrganisationEvent;
 
-use App\Models\Taxonomy;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreRequest extends FormRequest
+class DestroyRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,7 +13,7 @@ class StoreRequest extends FormRequest
      */
     public function authorize()
     {
-        if ($this->user()->isGlobalAdmin()) {
+        if ($this->user()->isSuperAdmin()) {
             return true;
         }
 
@@ -28,11 +27,8 @@ class StoreRequest extends FormRequest
      */
     public function rules()
     {
-        $count = Taxonomy::organisationEvent()->children()->count() + 1;
-
         return [
-            'name' => ['required', 'string', 'min:1', 'max:255'],
-            'order' => ['required', 'integer', 'min:1', "max:$count"],
+            //
         ];
     }
 }

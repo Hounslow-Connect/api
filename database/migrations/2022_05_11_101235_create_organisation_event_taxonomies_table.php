@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Taxonomy;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,8 +8,6 @@ class CreateOrganisationEventTaxonomiesTable extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
     public function up()
     {
@@ -20,18 +17,10 @@ class CreateOrganisationEventTaxonomiesTable extends Migration
             $table->foreignUuid('taxonomy_id', 'taxonomies');
             $table->timestamps();
         });
-
-        Taxonomy::create([
-            'name' => Taxonomy::NAME_ORGANISATION_EVENT,
-            'order' => 0,
-            'depth' => 0,
-        ]);
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
     public function down()
     {

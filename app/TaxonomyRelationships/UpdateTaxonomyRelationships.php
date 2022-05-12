@@ -32,9 +32,9 @@ trait UpdateTaxonomyRelationships
     protected function createTaxonomyRelationships(Taxonomy $taxonomy): Model
     {
         $hasParent = $taxonomy->parent !== null;
-        $parentIsNotTopLevel = $taxonomy->parent->id !== Taxonomy::category()->id;
+        $parentIsNotTopLevel = $hasParent && $taxonomy->parent->id !== Taxonomy::category()->id;
 
-        if ($hasParent && $parentIsNotTopLevel) {
+        if ($parentIsNotTopLevel) {
             $this->createTaxonomyRelationships($taxonomy->parent);
         }
 

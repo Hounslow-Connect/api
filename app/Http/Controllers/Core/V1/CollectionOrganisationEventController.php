@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Core\V1;
 
 use App\Events\EndpointHit;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CollectionPersona\DestroyRequest;
-use App\Http\Requests\CollectionPersona\IndexRequest;
-use App\Http\Requests\CollectionPersona\ShowRequest;
-use App\Http\Requests\CollectionPersona\StoreRequest;
-use App\Http\Requests\CollectionPersona\UpdateRequest;
-use App\Http\Resources\CollectionPersonaResource;
+use App\Http\Requests\CollectionOrganisationEvent\DestroyRequest;
+use App\Http\Requests\CollectionOrganisationEvent\IndexRequest;
+use App\Http\Requests\CollectionOrganisationEvent\ShowRequest;
+use App\Http\Requests\CollectionOrganisationEvent\StoreRequest;
+use App\Http\Requests\CollectionOrganisationEvent\UpdateRequest;
+use App\Http\Resources\CollectionOrganisationEventResource;
 use App\Http\Responses\ResourceDeleted;
 use App\Models\Collection;
 use App\Models\File;
@@ -18,10 +18,10 @@ use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\Filter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class CollectionPersonaController extends Controller
+class CollectionOrganisationEventController extends Controller
 {
     /**
-     * CollectionPersonaController constructor.
+     * CollectionOrganisationEventController constructor.
      */
     public function __construct()
     {
@@ -31,34 +31,34 @@ class CollectionPersonaController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @param \App\Http\Requests\CollectionPersona\IndexRequest $request
+     * @param \App\Http\Requests\CollectionOrganisationEvent\IndexRequest $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     public function index(IndexRequest $request)
     {
-        $baseQuery = Collection::personas()
+        $baseQuery = Collection::organisationEvents()
             ->orderBy('order');
 
-        $personaQuery = QueryBuilder::for($baseQuery)
+        $organisationEventQuery = QueryBuilder::for($baseQuery)
             ->with('taxonomies');
         if ($request->is('*/all')) {
-            $personas = $personaQuery->get();
+            $organisationEventCollections = $organisationEventQuery->get();
         } else {
-            $personas = $personaQuery->allowedFilters([
+            $organisationEventCollections = $organisationEventQuery->allowedFilters([
                 Filter::exact('id'),
             ])
                 ->paginate(per_page($request->per_page));
         }
 
-        event(EndpointHit::onRead($request, 'Viewed all collection personas'));
+        event(EndpointHit::onRead($request, 'Viewed all organisation event collections'));
 
-        return CollectionPersonaResource::collection($personas);
+        return CollectionOrganisationEventResource::collection($organisationEventCollections);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \App\Http\Requests\CollectionPersona\StoreRequest $request
+     * @param \App\Http\Requests\CollectionOrganisationEvent\StoreRequest $request
      * @return \Illuminate\Http\Response
      */
     public function store(StoreRequest $request)
@@ -73,8 +73,8 @@ class CollectionPersonaController extends Controller
             }, $request->sideboxes ?? []);
 
             // Create the collection record.
-            $persona = Collection::create([
-                'type' => Collection::TYPE_PERSONA,
+            $organisationEventCollection = Collection::create([
+                'type' => Collection::TYPE_ORGANISATION_EVENT,
                 'name' => $request->name,
                 'meta' => [
                     'intro' => $request->intro,
@@ -92,23 +92,23 @@ class CollectionPersonaController extends Controller
 
             // Create all of the pivot records.
             $taxonomies = Taxonomy::whereIn('id', $request->category_taxonomies)->get();
-            $persona->syncCollectionTaxonomies($taxonomies);
+            $organisationEventCollection->syncCollectionTaxonomies($taxonomies);
 
             // Reload the newly created pivot records.
-            $persona->load('taxonomies');
+            $organisationEventCollection->load('taxonomies');
 
-            event(EndpointHit::onCreate($request, "Created collection persona [{$persona->id}]", $persona));
+            event(EndpointHit::onCreate($request, "Created organisation event collection [{$organisationEventCollection->id}]", $organisationEventCollection));
 
-            return new CollectionPersonaResource($persona);
+            return new CollectionOrganisationEventResource($organisationEventCollection);
         });
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\Http\Requests\CollectionPersona\ShowRequest $request
+     * @param \App\Http\Requests\CollectionOrganisationEvent\ShowRequest $request
      * @param \App\Models\Collection $collection
-     * @return \App\Http\Resources\CollectionPersonaResource
+     * @return \App\Http\Resources\CollectionOrganisationEventResource
      */
     public function show(ShowRequest $request, Collection $collection)
     {
@@ -118,15 +118,15 @@ class CollectionPersonaController extends Controller
         $collection = QueryBuilder::for($baseQuery)
             ->firstOrFail();
 
-        event(EndpointHit::onRead($request, "Viewed collection persona [{$collection->id}]", $collection));
+        event(EndpointHit::onRead($request, "Viewed organisation event collection [{$collection->id}]", $collection));
 
-        return new CollectionPersonaResource($collection);
+        return new CollectionOrganisationEventResource($collection);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \App\Http\Requests\CollectionPersona\UpdateRequest $request
+     * @param \App\Http\Requests\CollectionOrganisationEvent\UpdateRequest $request
      * @param \App\Models\Collection $collection
      * @return \Illuminate\Http\Response
      */
@@ -164,27 +164,27 @@ class CollectionPersonaController extends Controller
             $taxonomies = Taxonomy::whereIn('id', $request->category_taxonomies)->get();
             $collection->syncCollectionTaxonomies($taxonomies);
 
-            event(EndpointHit::onUpdate($request, "Updated collection persona [{$collection->id}]", $collection));
+            event(EndpointHit::onUpdate($request, "Updated organisation event collection [{$collection->id}]", $collection));
 
-            return new CollectionPersonaResource($collection);
+            return new CollectionOrganisationEventResource($collection);
         });
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Http\Requests\CollectionPersona\DestroyRequest $request
+     * @param \App\Http\Requests\CollectionOrganisationEvent\DestroyRequest $request
      * @param \App\Models\Collection $collection
      * @return \Illuminate\Http\Response
      */
     public function destroy(DestroyRequest $request, Collection $collection)
     {
         return DB::transaction(function () use ($request, $collection) {
-            event(EndpointHit::onDelete($request, "Deleted collection persona [{$collection->id}]", $collection));
+            event(EndpointHit::onDelete($request, "Deleted organisation event collection [{$collection->id}]", $collection));
 
             $collection->delete();
 
-            return new ResourceDeleted('collection persona');
+            return new ResourceDeleted('organisation event collection');
         });
     }
 }

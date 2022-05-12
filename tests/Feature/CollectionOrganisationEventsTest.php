@@ -8,6 +8,7 @@ use App\Models\Collection;
 use App\Models\CollectionTaxonomy;
 use App\Models\File;
 use App\Models\Organisation;
+use App\Models\OrganisationEvent;
 use App\Models\Service;
 use App\Models\Taxonomy;
 use App\Models\User;
@@ -15,27 +16,47 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
-class CollectionPersonasTest extends TestCase
+class CollectionOrganisationEventTest extends TestCase
 {
+    /**
+     * Setup
+     *
+     **/
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $organisationEventCollection1 = factory(Collection::class)->states('typeOrganisationEvent')->create();
+        $organisationEventCollection2 = factory(Collection::class)->states('typeOrganisationEvent')->create();
+        $organisationEvent1 = factory(OrganisationEvent::class)->create();
+        $organisationEvent2 = factory(OrganisationEvent::class)->create();
+        $taxonomys1 = Taxonomy::category()->children()->inRandomOrder()->limit(5)->get();
+        $taxonomys2 = Taxonomy::category()->children()->inRandomOrder()->limit(5)->get();
+        $organisationEventCollection1->syncCollectionTaxonomies($taxonomys1);
+        $organisationEventCollection2->syncCollectionTaxonomies($taxonomys2);
+        $organisationEvent1->syncTaxonomyRelationships($taxonomys1);
+        $organisationEvent2->syncTaxonomyRelationships($taxonomys2);
+    }
     /*
-     * List all the persona collections.
+     * List all the organisation event collections.
      */
 
     public function test_guest_can_list_them()
     {
-        $response = $this->json('GET', '/core/v1/collections/personas');
+        $response = $this->json('GET', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonCollection([
             'id',
             'name',
             'intro',
-            'subtitle',
             'order',
             'enabled',
+            'image_file_id',
             'sideboxes' => [
                 '*' => [
                     'title',
@@ -57,14 +78,14 @@ class CollectionPersonasTest extends TestCase
     }
 
     /*
-     * List all the persona collections.
+     * List all the organisation event collections.
      */
 
     public function test_guest_can_list_all_of_them()
     {
-        $response = $this->json('GET', '/core/v1/collections/personas/all');
+        $response = $this->json('GET', '/core/v1/collections/organisation-events/all');
 
-        $collectionPersonaCount = Collection::personas()->count();
+        $collectionOrganisationEventCount = Collection::organisationEvents()->count();
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonStructure([
@@ -73,7 +94,7 @@ class CollectionPersonasTest extends TestCase
                     'id',
                     'name',
                     'intro',
-                    'subtitle',
+                    'image_file_id',
                     'order',
                     'enabled',
                     'sideboxes' => [
@@ -96,20 +117,20 @@ class CollectionPersonasTest extends TestCase
                 ],
             ],
         ]);
-        $response->assertJsonCount($collectionPersonaCount, 'data');
+        $response->assertJsonCount($collectionOrganisationEventCount, 'data');
     }
 
     public function test_guest_can_list_enabled_and_disabled_collections()
     {
-        $disabledCollection = Collection::personas()->first();
+        $disabledCollection = Collection::organisationEvents()->first();
 
         $disabledCollection->disable()->save();
 
-        $enabledCollection = Collection::personas()->offset(1)->first();
+        $enabledCollection = Collection::organisationEvents()->offset(1)->first();
 
         $enabledCollection->enable()->save();
 
-        $response = $this->json('GET', '/core/v1/collections/personas');
+        $response = $this->json('GET', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment([
@@ -125,15 +146,15 @@ class CollectionPersonasTest extends TestCase
 
     public function test_guest_can_list_all_enabled_and_disabled_collections()
     {
-        $disabledCollection = Collection::personas()->first();
+        $disabledCollection = Collection::organisationEvents()->first();
 
         $disabledCollection->disable()->save();
 
-        $enabledCollection = Collection::personas()->offset(1)->first();
+        $enabledCollection = Collection::organisationEvents()->offset(1)->first();
 
         $enabledCollection->enable()->save();
 
-        $response = $this->json('GET', '/core/v1/collections/personas/all');
+        $response = $this->json('GET', '/core/v1/collections/organisation-events/all');
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment([
@@ -151,7 +172,7 @@ class CollectionPersonasTest extends TestCase
     {
         $this->fakeEvents();
 
-        $this->json('GET', '/core/v1/collections/personas');
+        $this->json('GET', '/core/v1/collections/organisation-events');
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) {
             return ($event->getAction() === Audit::ACTION_READ);
@@ -164,7 +185,7 @@ class CollectionPersonasTest extends TestCase
 
     public function test_guest_cannot_create_one()
     {
-        $response = $this->json('POST', '/core/v1/collections/personas');
+        $response = $this->json('POST', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -181,7 +202,7 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas');
+        $response = $this->json('POST', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -198,7 +219,7 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas');
+        $response = $this->json('POST', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -215,7 +236,7 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas');
+        $response = $this->json('POST', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -230,7 +251,7 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas');
+        $response = $this->json('POST', '/core/v1/collections/organisation-events');
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -244,12 +265,21 @@ class CollectionPersonasTest extends TestCase
         $user->makeSuperAdmin();
         $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -261,7 +291,7 @@ class CollectionPersonasTest extends TestCase
             'id',
             'name',
             'intro',
-            'subtitle',
+            'image_file_id',
             'order',
             'enabled',
             'sideboxes' => [
@@ -283,9 +313,8 @@ class CollectionPersonasTest extends TestCase
             'updated_at',
         ]);
         $response->assertJsonFragment([
-            'name' => 'Test Persona',
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -293,6 +322,10 @@ class CollectionPersonasTest extends TestCase
         $response->assertJsonFragment([
             'id' => $randomCategory->id,
         ]);
+
+        $collectionArray = $this->getResponseContent($response)['data'];
+        $response = $this->get("/core/v1/collections/categories/{$collectionArray['id']}/image.svg");
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $response->content());
     }
 
     public function test_super_admin_can_create_a_disabled_one()
@@ -306,10 +339,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [
@@ -324,9 +356,8 @@ class CollectionPersonasTest extends TestCase
         $response->assertStatus(Response::HTTP_CREATED);
 
         $response->assertJsonFragment([
-            'name' => 'Test Persona',
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [
@@ -341,7 +372,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_created_at_beginning()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -349,45 +380,41 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -404,7 +431,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_created_at_middle()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -412,45 +439,41 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 2,
             'enabled' => true,
             'sideboxes' => [],
@@ -467,7 +490,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_created_at_end()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -475,45 +498,41 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -530,7 +549,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_cannot_be_less_than_1_when_created()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -540,10 +559,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 0,
             'enabled' => true,
             'sideboxes' => [],
@@ -556,7 +574,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_cannot_be_greater_than_count_plus_1_when_created()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -564,34 +582,31 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -614,10 +629,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -632,21 +646,20 @@ class CollectionPersonasTest extends TestCase
     }
 
     /*
-     * Get a specific persona collection.
+     * Get a specific organisation event collection.
      */
 
     public function test_guest_can_view_one()
     {
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $response = $this->json('GET', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('GET', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonResource([
             'id',
             'name',
             'intro',
-            'subtitle',
             'order',
             'enabled',
             'sideboxes' => [
@@ -668,15 +681,14 @@ class CollectionPersonasTest extends TestCase
             'updated_at',
         ]);
         $response->assertJsonFragment([
-            'id' => $persona->id,
-            'name' => $persona->name,
-            'intro' => $persona->meta['intro'],
-            'subtitle' => $persona->meta['subtitle'],
-            'order' => $persona->order,
-            'enabled' => $persona->enabled,
-            'sideboxes' => $persona->meta['sideboxes'],
-            'created_at' => $persona->created_at->format(CarbonImmutable::ISO8601),
-            'updated_at' => $persona->updated_at->format(CarbonImmutable::ISO8601),
+            'id' => $organisationEvent->id,
+            'name' => $organisationEvent->name,
+            'intro' => $organisationEvent->meta['intro'],
+            'order' => $organisationEvent->order,
+            'enabled' => $organisationEvent->enabled,
+            'sideboxes' => $organisationEvent->meta['sideboxes'],
+            'created_at' => $organisationEvent->created_at->format(CarbonImmutable::ISO8601),
+            'updated_at' => $organisationEvent->updated_at->format(CarbonImmutable::ISO8601),
         ]);
     }
 
@@ -684,25 +696,25 @@ class CollectionPersonasTest extends TestCase
     {
         $this->fakeEvents();
 
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $this->json('GET', "/core/v1/collections/personas/{$persona->id}");
+        $this->json('GET', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
-        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($persona) {
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($organisationEvent) {
             return ($event->getAction() === Audit::ACTION_READ) &&
-                ($event->getModel()->id === $persona->id);
+                ($event->getModel()->id === $organisationEvent->id);
         });
     }
 
     /*
-     * Update a specific persona collection.
+     * Update a specific organisation event collection.
      */
 
     public function test_guest_cannot_update_one()
     {
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -716,11 +728,11 @@ class CollectionPersonasTest extends TestCase
         $service = factory(Service::class)->create();
         $user = factory(User::class)->create();
         $user->makeServiceWorker($service);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -734,11 +746,11 @@ class CollectionPersonasTest extends TestCase
         $service = factory(Service::class)->create();
         $user = factory(User::class)->create();
         $user->makeServiceAdmin($service);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -752,11 +764,11 @@ class CollectionPersonasTest extends TestCase
         $organisation = factory(Organisation::class)->create();
         $user = factory(User::class)->create();
         $user->makeOrganisationAdmin($organisation);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -768,15 +780,14 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeGlobalAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
-            'name' => 'Test Persona',
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -788,7 +799,6 @@ class CollectionPersonasTest extends TestCase
             'id',
             'name',
             'intro',
-            'subtitle',
             'order',
             'enabled',
             'sideboxes' => [
@@ -810,9 +820,8 @@ class CollectionPersonasTest extends TestCase
             'updated_at',
         ]);
         $response->assertJsonFragment([
-            'name' => 'Test Persona',
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -829,16 +838,15 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeGlobalAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
-        $persona->enable()->save();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
+        $organisationEvent->enable()->save();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
-            'name' => 'Test Persona',
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -855,16 +863,15 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
-        $persona->enable()->save();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
+        $organisationEvent->enable()->save();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
-            'name' => 'Test Persona',
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -876,7 +883,6 @@ class CollectionPersonasTest extends TestCase
             'id',
             'name',
             'intro',
-            'subtitle',
             'order',
             'enabled',
             'sideboxes' => [
@@ -898,9 +904,8 @@ class CollectionPersonasTest extends TestCase
             'updated_at',
         ]);
         $response->assertJsonFragment([
-            'name' => 'Test Persona',
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -913,7 +918,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_updated_to_beginning()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -921,37 +926,34 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
@@ -959,10 +961,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$third->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$third->id}", [
             'name' => 'Third',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -978,7 +979,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_updated_to_middle()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -986,37 +987,34 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
@@ -1024,10 +1022,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$first->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$first->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 2,
             'enabled' => true,
             'sideboxes' => [],
@@ -1043,7 +1040,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_updated_to_end()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -1051,37 +1048,34 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
@@ -1089,10 +1083,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$first->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$first->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 3,
             'enabled' => true,
             'sideboxes' => [],
@@ -1108,21 +1101,20 @@ class CollectionPersonasTest extends TestCase
     public function test_order_cannot_be_less_than_1_when_updated()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+        $organisationEvent = Collection::create([
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
@@ -1130,10 +1122,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 0,
             'enabled' => true,
             'sideboxes' => [],
@@ -1146,21 +1137,20 @@ class CollectionPersonasTest extends TestCase
     public function test_order_cannot_be_greater_than_count_plus_1_when_updated()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+        $organisationEvent = Collection::create([
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'image_file_id' => null,
                 'sideboxes' => [],
             ],
@@ -1168,10 +1158,9 @@ class CollectionPersonasTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
             'name' => 'First',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 2,
             'enabled' => true,
             'sideboxes' => [],
@@ -1190,37 +1179,36 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
-            'name' => 'Test Persona',
+        $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
             'category_taxonomies' => [$taxonomy->id],
         ]);
 
-        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $persona) {
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $organisationEvent) {
             return ($event->getAction() === Audit::ACTION_UPDATE) &&
                 ($event->getUser()->id === $user->id) &&
-                ($event->getModel()->id === $persona->id);
+                ($event->getModel()->id === $organisationEvent->id);
         });
     }
 
     /*
-     * Delete a specific persona collection.
+     * Delete a specific organisation event collection.
      */
 
     public function test_guest_cannot_delete_one()
     {
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED);
     }
@@ -1234,11 +1222,11 @@ class CollectionPersonasTest extends TestCase
         $service = factory(Service::class)->create();
         $user = factory(User::class)->create();
         $user->makeServiceWorker($service);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -1252,11 +1240,11 @@ class CollectionPersonasTest extends TestCase
         $service = factory(Service::class)->create();
         $user = factory(User::class)->create();
         $user->makeServiceAdmin($service);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -1270,11 +1258,11 @@ class CollectionPersonasTest extends TestCase
         $organisation = factory(Organisation::class)->create();
         $user = factory(User::class)->create();
         $user->makeOrganisationAdmin($organisation);
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -1286,11 +1274,11 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeGlobalAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_FORBIDDEN);
     }
@@ -1302,21 +1290,21 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEvent->id}");
 
         $response->assertStatus(Response::HTTP_OK);
-        $this->assertDatabaseMissing((new Collection())->getTable(), ['id' => $persona->id]);
-        $this->assertDatabaseMissing((new CollectionTaxonomy())->getTable(), ['collection_id' => $persona->id]);
+        $this->assertDatabaseMissing((new Collection())->getTable(), ['id' => $organisationEvent->id]);
+        $this->assertDatabaseMissing((new CollectionTaxonomy())->getTable(), ['collection_id' => $organisationEvent->id]);
     }
 
     public function test_order_is_updated_when_deleted_at_beginning()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -1324,42 +1312,39 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$first->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$first->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new Collection())->getTable(), ['id' => $first->id]);
@@ -1370,7 +1355,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_deleted_at_middle()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -1378,42 +1363,39 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$second->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$second->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new Collection())->getTable(), ['id' => $second->id]);
@@ -1424,7 +1406,7 @@ class CollectionPersonasTest extends TestCase
     public function test_order_is_updated_when_deleted_at_end()
     {
         // Delete the existing seeded personas.
-        $this->truncateCollectionPersonas();
+        $this->truncateCollectionOrganisationEvents();
 
         /**
          * @var \App\Models\User $user
@@ -1432,42 +1414,39 @@ class CollectionPersonasTest extends TestCase
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
         $first = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'First',
             'order' => 1,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $second = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Second',
             'order' => 2,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
         $third = Collection::create([
-            'type' => Collection::TYPE_PERSONA,
+            'type' => Collection::TYPE_ORGANISATION_EVENT,
             'name' => 'Third',
             'order' => 3,
             'enabled' => true,
             'meta' => [
                 'intro' => 'Lorem ipsum',
-                'subtitle' => 'Subtitle here',
                 'sideboxes' => [],
             ],
         ]);
 
         Passport::actingAs($user);
 
-        $response = $this->json('DELETE', "/core/v1/collections/personas/{$third->id}");
+        $response = $this->json('DELETE', "/core/v1/collections/organisation-events/{$third->id}");
 
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseMissing((new Collection())->getTable(), ['id' => $third->id]);
@@ -1484,49 +1463,49 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEventCollection = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
         Passport::actingAs($user);
 
-        $this->json('DELETE', "/core/v1/collections/personas/{$persona->id}");
+        $this->json('DELETE', "/core/v1/collections/organisation-events/{$organisationEventCollection->id}");
 
-        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $persona) {
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $organisationEventCollection) {
             return ($event->getAction() === Audit::ACTION_DELETE) &&
                 ($event->getUser()->id === $user->id) &&
-                ($event->getModel()->id === $persona->id);
+                ($event->getModel()->id === $organisationEventCollection->id);
         });
     }
 
     /*
-     * Get a specific persona collection's image.
+     * Get a specific organisation event collection's image.
      */
 
     public function test_guest_can_view_image()
     {
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEventCollection = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $response = $this->get("/core/v1/collections/personas/{$persona->id}/image.png");
+        $response = $this->get("/core/v1/collections/organisation-events/{$organisationEventCollection->id}/image.svg");
 
         $response->assertStatus(Response::HTTP_OK);
-        $response->assertHeader('Content-Type', 'image/png');
+        $response->assertHeader('Content-Type', 'image/svg+xml');
     }
 
     public function test_audit_created_when_image_viewed()
     {
         $this->fakeEvents();
 
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
+        $organisationEventCollection = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
 
-        $this->get("/core/v1/collections/personas/{$persona->id}/image.png");
+        $this->get("/core/v1/collections/organisation-events/{$organisationEventCollection->id}/image.png");
 
-        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($persona) {
+        Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($organisationEventCollection) {
             return ($event->getAction() === Audit::ACTION_READ) &&
-                ($event->getModel()->id === $persona->id);
+                ($event->getModel()->id === $organisationEventCollection->id);
         });
     }
 
     /*
-     * Upload a specific persona collection's image.
+     * Upload a specific organisation event collection's image.
      */
 
     public function test_super_admin_can_upload_image()
@@ -1547,10 +1526,9 @@ class CollectionPersonasTest extends TestCase
             'file' => 'data:image/png;base64,' . base64_encode($image),
         ]);
 
-        $response = $this->json('POST', '/core/v1/collections/personas', [
-            'name' => 'Test Persona',
+        $response = $this->json('POST', '/core/v1/collections/organisation-events', [
+            'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
-            'subtitle' => 'Subtitle here',
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -1560,12 +1538,12 @@ class CollectionPersonasTest extends TestCase
 
         $response->assertStatus(Response::HTTP_CREATED);
         $collectionArray = $this->getResponseContent($response)['data'];
-        $content = $this->get("/core/v1/collections/personas/{$collectionArray['id']}/image.png")->content();
+        $content = $this->get("/core/v1/collections/organisation-events/{$collectionArray['id']}/image.png")->content();
         $this->assertEquals($image, $content);
     }
 
     /*
-     * Delete a specific persona collection's image.
+     * Delete a specific organisation event collection's image.
      */
 
     public function test_super_admin_can_delete_image()
@@ -1575,27 +1553,26 @@ class CollectionPersonasTest extends TestCase
          */
         $user = factory(User::class)->create();
         $user->makeSuperAdmin();
-        $persona = Collection::personas()->inRandomOrder()->firstOrFail();
-        $meta = $persona->meta;
+        $organisationEventCollection = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
+        $meta = $organisationEventCollection->meta;
         $meta['image_file_id'] = factory(File::class)->create()->id;
-        $persona->meta = $meta;
-        $persona->save();
+        $organisationEventCollection->meta = $meta;
+        $organisationEventCollection->save();
 
         Passport::actingAs($user);
 
-        $response = $this->json('PUT', "/core/v1/collections/personas/{$persona->id}", [
-            'name' => $persona->name,
-            'intro' => $persona->meta['intro'],
-            'subtitle' => $persona->meta['subtitle'],
-            'order' => $persona->order,
-            'enabled' => $persona->enabled,
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEventCollection->id}", [
+            'name' => $organisationEventCollection->name,
+            'intro' => $organisationEventCollection->meta['intro'],
+            'order' => $organisationEventCollection->order,
+            'enabled' => $organisationEventCollection->enabled,
             'sideboxes' => [],
-            'category_taxonomies' => $persona->taxonomies()->pluck(table(Taxonomy::class, 'id')),
+            'category_taxonomies' => $organisationEventCollection->taxonomies()->pluck(table(Taxonomy::class, 'id')),
             'image_file_id' => null,
         ]);
 
         $response->assertStatus(Response::HTTP_OK);
-        $persona = $persona->fresh();
-        $this->assertEquals(null, $persona->meta['image_file_id']);
+        $organisationEventCollection = $organisationEventCollection->fresh();
+        $this->assertEquals(null, $organisationEventCollection->meta['image_file_id']);
     }
 }

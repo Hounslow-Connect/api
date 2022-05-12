@@ -102,11 +102,11 @@ class CollectionCategoriesTest extends TestCase
 
     public function test_guest_can_list_enabled_and_disabled_collections()
     {
-        $disabledCollection = Collection::where('type', 'category')->first();
+        $disabledCollection = Collection::categories()->first();
 
         $disabledCollection->disable()->save();
 
-        $enabledCollection = Collection::where('type', 'category')->latest()->first();
+        $enabledCollection = Collection::categories()->offset(1)->first();
 
         $enabledCollection->enable()->save();
 
@@ -126,11 +126,11 @@ class CollectionCategoriesTest extends TestCase
 
     public function test_guest_can_list_all_enabled_and_disabled_collections()
     {
-        $disabledCollection = Collection::where('type', 'category')->first();
+        $disabledCollection = Collection::categories()->first();
 
         $disabledCollection->disable()->save();
 
-        $enabledCollection = Collection::where('type', 'category')->latest()->first();
+        $enabledCollection = Collection::categories()->offset(1)->first();
 
         $enabledCollection->enable()->save();
 

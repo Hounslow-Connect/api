@@ -4,6 +4,7 @@ namespace App\Models\Relationships;
 
 use App\Models\CollectionTaxonomy;
 use App\Models\OrganisationEvent;
+use App\Models\OrganisationEventTaxonomy;
 use App\Models\Referral;
 use App\Models\Service;
 use App\Models\ServiceTaxonomy;
@@ -64,6 +65,6 @@ trait TaxonomyRelationships
      */
     public function organisationEvents()
     {
-        return $this->belongsToMany(OrganisationEvent::class, 'organisation_event_taxonomies');
+        return $this->belongsToMany(OrganisationEvent::class, (new OrganisationEventTaxonomy())->getTable());
     }
 }

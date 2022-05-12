@@ -2,6 +2,7 @@
 
 namespace App\Docs\Schemas\OrganisationEvent;
 
+use App\Docs\Schemas\Taxonomy\Category\TaxonomyCategorySchema;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\BaseObject;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\Schema;
 
@@ -55,6 +56,8 @@ class OrganisationEventSchema extends Schema
                 Schema::boolean('has_image'),
                 Schema::boolean('homepage'),
                 Schema::boolean('is_virtual'),
+                Schema::array('category_taxonomies')
+                    ->items(TaxonomyCategorySchema::create()),
                 Schema::string('created_at')
                     ->format(Schema::FORMAT_DATE_TIME)
                     ->nullable(),

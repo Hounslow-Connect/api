@@ -55,7 +55,12 @@ class UpdateOrganisationEventSchema extends Schema
                 Schema::string('image_file_id')
                     ->format(Schema::FORMAT_UUID)
                     ->description('The ID of the file uploaded')
-                    ->nullable()
+                    ->nullable(),
+                Schema::array('category_taxonomies')
+                    ->items(
+                        Schema::string()
+                            ->format(Schema::FORMAT_UUID)
+                    )
             );
     }
 }
