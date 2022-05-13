@@ -51,6 +51,16 @@ EOT
                 StartsAfterParameter::create(),
                 EndsBeforeParameter::create(),
                 EndsAfterParameter::create(),
+                FilterParameter::create(null, 'wheelchair')
+                    ->description('Has a wheelchair accessible location')
+                    ->schema(
+                        Schema::boolean()
+                    ),
+                FilterParameter::create(null, 'induction-loop')
+                    ->description('Has a location with an induction loop')
+                    ->schema(
+                        Schema::boolean()
+                    ),
                 FilterParameter::create(null, 'organisation_id')
                     ->description('Comma separated list of organisation IDs to filter by')
                     ->schema(

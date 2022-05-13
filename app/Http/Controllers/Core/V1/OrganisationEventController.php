@@ -4,10 +4,6 @@ namespace App\Http\Controllers\Core\V1;
 
 use App\Events\EndpointHit;
 use App\Http\Controllers\Controller;
-use App\Http\Filters\OrganisationEvent\EndsAfterFilter;
-use App\Http\Filters\OrganisationEvent\EndsBeforeFilter;
-use App\Http\Filters\OrganisationEvent\StartsAfterFilter;
-use App\Http\Filters\OrganisationEvent\StartsBeforeFilter;
 use App\Http\Requests\OrganisationEvent\DestroyRequest;
 use App\Http\Requests\OrganisationEvent\IndexRequest;
 use App\Http\Requests\OrganisationEvent\ShowRequest;

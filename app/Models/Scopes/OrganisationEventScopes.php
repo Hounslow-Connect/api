@@ -50,33 +50,33 @@ trait OrganisationEventScopes
 
     /**
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param boolean $required
+     * @param bool $required
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeHasWheelchairAccess(Builder $query, $required): Builder
     {
         return $query->whereExists(function ($query) use ($required) {
-            $locationsTable = (new Location)->getTable();
+            $locationsTable = (new Location())->getTable();
             $query->select(DB::raw(1))
                 ->from($locationsTable)
                 ->whereRaw("$locationsTable.id = {$this->getTable()}.location_id")
-                ->where("$locationsTable.has_wheelchair_access", (bool) $required);
+                ->where("$locationsTable.has_wheelchair_access", (bool)$required);
         });
     }
 
     /**
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param boolean $required
+     * @param bool $required
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeHasInductionLoop(Builder $query, $required): Builder
     {
         return $query->whereExists(function ($query) use ($required) {
-            $locationsTable = (new Location)->getTable();
+            $locationsTable = (new Location())->getTable();
             $query->select(DB::raw(1))
                 ->from($locationsTable)
                 ->whereRaw("$locationsTable.id = {$this->getTable()}.location_id")
-                ->where("$locationsTable.has_induction_loop", (bool) $required);
+                ->where("$locationsTable.has_induction_loop", (bool)$required);
         });
     }
 }
