@@ -16,7 +16,7 @@ class StartsBeforeParameter extends Parameter
     {
         return parent::create($objectId)
             ->in(static::IN_QUERY)
-            ->name('starts_before')
+            ->name('filter[starts_before]')
             ->description('The event start date is before the supplied date')
             ->schema(
                 Schema::string()->format(Schema::FORMAT_DATE)->example('2022-05-11')

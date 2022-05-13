@@ -16,7 +16,7 @@ class EndsBeforeParameter extends Parameter
     {
         return parent::create($objectId)
             ->in(static::IN_QUERY)
-            ->name('ends_before')
+            ->name('filter[ends_before]')
             ->description('The event end date is before the supplied date')
             ->schema(
                 Schema::string()->format(Schema::FORMAT_DATE)->example('2022-05-11')

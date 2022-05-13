@@ -16,7 +16,7 @@ class StartsAfterParameter extends Parameter
     {
         return parent::create($objectId)
             ->in(static::IN_QUERY)
-            ->name('starts_after')
+            ->name('filter[starts_after]')
             ->description('The event start date is after the supplied date')
             ->schema(
                 Schema::string()->format(Schema::FORMAT_DATE)->example('2022-05-11')
