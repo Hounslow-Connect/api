@@ -69,6 +69,14 @@ EOT
                         )
                     )
                     ->style(FilterParameter::STYLE_SIMPLE),
+                FilterParameter::create(null, 'collections')
+                    ->description('Comma separated list of collection IDs to filter by')
+                    ->schema(
+                        Schema::array()->items(
+                            Schema::string()->format(Schema::FORMAT_UUID)
+                        )
+                    )
+                    ->style(FilterParameter::STYLE_SIMPLE),
                 IncludeParameter::create(null, ['organisation'])
             )
             ->responses(

@@ -350,16 +350,16 @@ class OrganisationEventsTest extends TestCase
         $taxonomy1 = factory(Taxonomy::class)->create();
         $taxonomy2 = factory(Taxonomy::class)->create();
         $taxonomy3 = factory(Taxonomy::class)->create();
-        $organisationEventCollection1->syncCollectionTaxonomies(collect([$taxonomy1]));
-        $organisationEventCollection2->syncCollectionTaxonomies(collect([$taxonomy2]));
+        $organisationEventCollection1->syncCollectionTaxonomies((new \Illuminate\Database\Eloquent\Collection([$taxonomy1])));
+        $organisationEventCollection2->syncCollectionTaxonomies((new \Illuminate\Database\Eloquent\Collection([$taxonomy2])));
 
         $organisationEvent1 = factory(OrganisationEvent::class)->create();
         $organisationEvent2 = factory(OrganisationEvent::class)->create();
         $organisationEvent3 = factory(OrganisationEvent::class)->create();
         $organisationEvent4 = factory(OrganisationEvent::class)->create();
-        $organisationEvent1->syncTaxonomyRelationships(collect([$taxonomy1]));
-        $organisationEvent2->syncTaxonomyRelationships(collect([$taxonomy2]));
-        $organisationEvent3->syncTaxonomyRelationships(collect([$taxonomy3]));
+        $organisationEvent1->syncTaxonomyRelationships((new \Illuminate\Database\Eloquent\Collection([$taxonomy1])));
+        $organisationEvent2->syncTaxonomyRelationships((new \Illuminate\Database\Eloquent\Collection([$taxonomy2])));
+        $organisationEvent3->syncTaxonomyRelationships((new \Illuminate\Database\Eloquent\Collection([$taxonomy3])));
 
         $response = $this->json('GET', "/core/v1/organisation-events?filter[collections]={$organisationEventCollection1->id}");
 

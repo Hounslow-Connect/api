@@ -2,7 +2,9 @@
 
 namespace App\Models\Scopes;
 
+use App\Models\CollectionTaxonomy;
 use App\Models\Location;
+use App\Models\OrganisationEventTaxonomy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -77,6 +79,23 @@ trait OrganisationEventScopes
                 ->from($locationsTable)
                 ->whereRaw("$locationsTable.id = {$this->getTable()}.location_id")
                 ->where("$locationsTable.has_induction_loop", (bool)$required);
+        });
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param bool $required
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInCollections(Builder $query, ...$collectionIds): Builder
+    {
+        return $query->whereIn('id', function ($query) use ($collectionIds) {
+            $organisationEventTaxonomyTable = (new OrganisationEventTaxonomy())->getTable();
+            $collectionTaxonomyTable = (new CollectionTaxonomy())->getTable();
+            $query->select("$organisationEventTaxonomyTable.organisation_event_id")
+                ->from($organisationEventTaxonomyTable)
+                ->join($collectionTaxonomyTable, "$collectionTaxonomyTable.taxonomy_id", '=', "$organisationEventTaxonomyTable.taxonomy_id")
+                ->whereIn("$collectionTaxonomyTable.collection_id", $collectionIds);
         });
     }
 }
