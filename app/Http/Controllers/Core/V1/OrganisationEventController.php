@@ -45,7 +45,7 @@ class OrganisationEventController extends Controller
         $baseQuery = OrganisationEvent::query();
 
         if (!$request->user() && !$request->has('filter[ends_after]')) {
-            Filter::custom('ends_after', EndsAfterFilter::class, 'end_date')->filter($baseQuery, (new DateTime('now'))->format('Y-m-d'));
+            $baseQuery->endsAfter((new DateTime('now'))->format('Y-m-d'));
         }
 
         $organisationEvents = QueryBuilder::for($baseQuery)
@@ -54,10 +54,12 @@ class OrganisationEventController extends Controller
                 Filter::exact('organisation_id'),
                 Filter::exact('homepage'),
                 'title',
-                Filter::custom('starts_before', StartsBeforeFilter::class, 'start_date'),
-                Filter::custom('starts_after', StartsAfterFilter::class, 'start_date'),
-                Filter::custom('ends_before', EndsBeforeFilter::class, 'end_date'),
-                Filter::custom('ends_after', EndsAfterFilter::class, 'end_date'),
+                Filter::scope('starts_before'),
+                Filter::scope('starts_after'),
+                Filter::scope('ends_before'),
+                Filter::scope('ends_after'),
+                Filter::scope('wheelchair', 'hasWheelchairAccess'),
+                Filter::scope('induction-loop', 'hasInductionLoop'),
             ])
             ->allowedIncludes(['organisation'])
             ->allowedSorts([

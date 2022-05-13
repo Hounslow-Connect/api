@@ -260,6 +260,88 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
+    public function getAllOrganisationEventsFilterByAccessibilityAsGuest200()
+    {
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_wheelchair_access' => false,
+                    'has_induction_loop' => false,
+                ])->id;
+            },
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_wheelchair_access' => true,
+                    'has_induction_loop' => false,
+                ])->id;
+            },
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_wheelchair_access' => false,
+                    'has_induction_loop' => true,
+                ])->id;
+            },
+        ]);
+        $organisationEvent4 = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_wheelchair_access' => true,
+                    'has_induction_loop' => true,
+                ])->id;
+            },
+        ]);
+        $organisationEvent5 = factory(OrganisationEvent::class)->create([
+            'is_virtual' => true,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=1");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent4->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent5->id]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[induction-loop]=1");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent4->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent5->id]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=1&filter[induction-loop]=1");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent4->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent5->id]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=0");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent4->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent5->id]);
+    }
+
+    /**
+     * @test
+     */
     public function getAllOrganisationEventsCreatesAuditAsGuest200()
     {
         $this->fakeEvents();
