@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Events\EndpointHit;
 use App\Models\Audit;
+use App\Models\Collection;
 use App\Models\Location;
 use App\Models\Organisation;
 use App\Models\OrganisationEvent;
@@ -337,6 +338,44 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonMissing(['id' => $organisationEvent2->id]);
         $response->assertJsonMissing(['id' => $organisationEvent4->id]);
         $response->assertJsonMissing(['id' => $organisationEvent5->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function getAllOrganisationEventsFilterByCollectionAsGuest200()
+    {
+        $organisationEventCollection1 = factory(Collection::class)->states('typeOrganisationEvent')->create();
+        $organisationEventCollection2 = factory(Collection::class)->states('typeOrganisationEvent')->create();
+        $taxonomy1 = factory(Taxonomy::class)->create();
+        $taxonomy2 = factory(Taxonomy::class)->create();
+        $taxonomy3 = factory(Taxonomy::class)->create();
+        $organisationEventCollection1->syncCollectionTaxonomies(collect([$taxonomy1]));
+        $organisationEventCollection2->syncCollectionTaxonomies(collect([$taxonomy2]));
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create();
+        $organisationEvent2 = factory(OrganisationEvent::class)->create();
+        $organisationEvent3 = factory(OrganisationEvent::class)->create();
+        $organisationEvent4 = factory(OrganisationEvent::class)->create();
+        $organisationEvent1->syncTaxonomyRelationships(collect([$taxonomy1]));
+        $organisationEvent2->syncTaxonomyRelationships(collect([$taxonomy2]));
+        $organisationEvent3->syncTaxonomyRelationships(collect([$taxonomy3]));
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[collections]={$organisationEventCollection1->id}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent4->id]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[collections]={$organisationEventCollection1->id},{$organisationEventCollection2->id}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent4->id]);
     }
 
     /**
