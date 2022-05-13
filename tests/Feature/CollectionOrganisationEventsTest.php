@@ -337,11 +337,21 @@ class CollectionOrganisationEventTest extends TestCase
         $user->makeSuperAdmin();
         $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [
@@ -374,6 +384,15 @@ class CollectionOrganisationEventTest extends TestCase
         // Delete the existing seeded personas.
         $this->truncateCollectionOrganisationEvents();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -415,6 +434,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -433,6 +453,15 @@ class CollectionOrganisationEventTest extends TestCase
         // Delete the existing seeded personas.
         $this->truncateCollectionOrganisationEvents();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -474,6 +503,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 2,
             'enabled' => true,
             'sideboxes' => [],
@@ -492,6 +522,15 @@ class CollectionOrganisationEventTest extends TestCase
         // Delete the existing seeded personas.
         $this->truncateCollectionOrganisationEvents();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -533,6 +572,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -551,6 +591,15 @@ class CollectionOrganisationEventTest extends TestCase
         // Delete the existing seeded personas.
         $this->truncateCollectionOrganisationEvents();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         /**
          * @var \App\Models\User $user
          */
@@ -562,6 +611,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 0,
             'enabled' => true,
             'sideboxes' => [],
@@ -575,6 +625,15 @@ class CollectionOrganisationEventTest extends TestCase
     {
         // Delete the existing seeded personas.
         $this->truncateCollectionOrganisationEvents();
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
 
         /**
          * @var \App\Models\User $user
@@ -607,6 +666,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 4,
             'enabled' => true,
             'sideboxes' => [],
@@ -627,11 +687,21 @@ class CollectionOrganisationEventTest extends TestCase
         $user->makeSuperAdmin();
         $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('POST', '/core/v1/collections/organisation-events', [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -783,11 +853,21 @@ class CollectionOrganisationEventTest extends TestCase
         $organisationEvent = Collection::organisationEvents()->inRandomOrder()->firstOrFail();
         $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
 
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $image->uploadBase64EncodedFile($base64Image);
+
         Passport::actingAs($user);
 
         $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -872,6 +952,7 @@ class CollectionOrganisationEventTest extends TestCase
         $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $organisationEvent->meta['image_file_id'],
             'order' => 1,
             'enabled' => false,
             'sideboxes' => [],
@@ -1184,9 +1265,10 @@ class CollectionOrganisationEventTest extends TestCase
 
         Passport::actingAs($user);
 
-        $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
+        $response = $this->json('PUT', "/core/v1/collections/organisation-events/{$organisationEvent->id}", [
             'name' => 'Test Organisation Event',
             'intro' => 'Lorem ipsum',
+            'image_file_id' => $organisationEvent->meta['image_file_id'],
             'order' => 1,
             'enabled' => true,
             'sideboxes' => [],
@@ -1546,7 +1628,7 @@ class CollectionOrganisationEventTest extends TestCase
      * Delete a specific organisation event collection's image.
      */
 
-    public function test_super_admin_can_delete_image()
+    public function test_super_admin_cannot_delete_image()
     {
         /**
          * @var \App\Models\User $user
@@ -1571,8 +1653,8 @@ class CollectionOrganisationEventTest extends TestCase
             'image_file_id' => null,
         ]);
 
-        $response->assertStatus(Response::HTTP_OK);
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $organisationEventCollection = $organisationEventCollection->fresh();
-        $this->assertEquals(null, $organisationEventCollection->meta['image_file_id']);
+        $this->assertEquals($meta['image_file_id'], $organisationEventCollection->meta['image_file_id']);
     }
 }
