@@ -469,6 +469,55 @@ class CollectionCategoriesTest extends TestCase
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function test_super_admin_creating_one_with_an_image_assigns_the_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeSuperAdmin();
+        $randomCategory = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('POST', '/core/v1/collections/categories', [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'image_file_id' => $image->id,
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [
+                [
+                    'title' => 'Sidebox title',
+                    'content' => 'Sidebox content',
+                ],
+            ],
+            'category_taxonomies' => [$randomCategory->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_CREATED);
+
+        $collectionArray = $this->getResponseContent($response)['data'];
+        $content = $this->get("/core/v1/collections/categories/{$collectionArray['id']}/image.png")->content();
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $content);
+
+        $this->assertEquals($image->id, $collectionArray['image_file_id']);
+
+        $this->assertDatabaseHas($image->getTable(), [
+            'id' => $image->id,
+            'meta' => null,
+        ]);
+    }
+
     public function test_order_is_updated_when_created_at_beginning()
     {
         // Delete the existing seeded categories.
@@ -1248,6 +1297,52 @@ class CollectionCategoriesTest extends TestCase
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function test_global_admin_updating_one_with_a_new_image_assigns_the_image()
+    {
+        /**
+         * @var \App\Models\User $user
+         */
+        $user = factory(User::class)->create();
+        $user->makeGlobalAdmin();
+        $category = Collection::categories()->inRandomOrder()->firstOrFail();
+        $taxonomy = Taxonomy::category()->children()->inRandomOrder()->firstOrFail();
+
+        $image = factory(File::class)->states('pending-assignment')->create([
+            'filename' => Str::random() . '.svg',
+            'mime_type' => 'image/svg+xml',
+        ]);
+
+        $base64Image = 'data:image/svg+xml;base64,' . base64_encode(Storage::disk('local')->get('/test-data/image.svg'));
+
+        $image->uploadBase64EncodedFile($base64Image);
+
+        Passport::actingAs($user);
+
+        $response = $this->json('PUT', "/core/v1/collections/categories/{$category->id}", [
+            'name' => 'Test Category',
+            'intro' => 'Lorem ipsum',
+            'subtitle' => 'Subtitle here',
+            'image_file_id' => $image->id,
+            'order' => 1,
+            'enabled' => true,
+            'sideboxes' => [],
+            'category_taxonomies' => [$taxonomy->id],
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+
+        $category = $category->fresh();
+        $this->assertEquals($image->id, $category->meta['image_file_id']);
+
+        $content = $this->get("/core/v1/collections/categories/{$category->id}/image.svg")->content();
+        $this->assertEquals(Storage::disk('local')->get('/test-data/image.svg'), $content);
+
+        $this->assertDatabaseHas($image->getTable(), [
+            'id' => $image->id,
+            'meta' => null,
+        ]);
     }
 
     public function test_global_admin_can_update_one_without_an_image_when_changing_order()
