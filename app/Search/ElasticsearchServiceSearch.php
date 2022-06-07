@@ -2,7 +2,7 @@
 
 namespace App\Search;
 
-use App\Contracts\Search;
+use App\Contracts\ServiceSearch;
 use App\Http\Resources\ServiceResource;
 use App\Models\Collection as CollectionModel;
 use App\Models\SearchHistory;
@@ -16,7 +16,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use InvalidArgumentException;
 
-class ElasticsearchSearch implements Search
+class ElasticsearchServiceSearch implements ServiceSearch
 {
     const MILES = 'mi';
     const YARDS = 'yd';
@@ -66,7 +66,7 @@ class ElasticsearchSearch implements Search
      * @param string $term
      * @return \App\Search\ElasticsearchSearch
      */
-    public function applyQuery(string $term): Search
+    public function applyQuery(string $term): ServiceSearch
     {
         $should = &$this->query['query']['bool']['must']['bool']['should'];
 
@@ -125,7 +125,7 @@ class ElasticsearchSearch implements Search
      * @param string $category
      * @return \App\Search\ElasticsearchSearch
      */
-    public function applyCategory(string $category): Search
+    public function applyCategory(string $category): ServiceSearch
     {
         $categoryModel = CollectionModel::query()
             ->with('taxonomies')
@@ -152,7 +152,7 @@ class ElasticsearchSearch implements Search
      * @param string $persona
      * @return \App\Search\ElasticsearchSearch
      */
-    public function applyPersona(string $persona): Search
+    public function applyPersona(string $persona): ServiceSearch
     {
         $categoryModel = CollectionModel::query()
             ->with('taxonomies')
@@ -179,7 +179,7 @@ class ElasticsearchSearch implements Search
      * @param string $waitTime
      * @return \App\Contracts\Search
      */
-    public function applyWaitTime(string $waitTime): Search
+    public function applyWaitTime(string $waitTime): ServiceSearch
     {
         if (!Service::waitTimeIsValid($waitTime)) {
             throw new InvalidArgumentException("The wait time [$waitTime] is not valid");
@@ -228,7 +228,7 @@ class ElasticsearchSearch implements Search
      * @param bool $isFree
      * @return \App\Contracts\Search
      */
-    public function applyIsFree(bool $isFree): Search
+    public function applyIsFree(bool $isFree): ServiceSearch
     {
         $this->query['query']['bool']['filter'][] = [
             'term' => [
@@ -244,7 +244,7 @@ class ElasticsearchSearch implements Search
      * @param \App\Support\Coordinate|null $location
      * @return \App\Search\ElasticsearchSearch
      */
-    public function applyOrder(string $order, Coordinate $location = null): Search
+    public function applyOrder(string $order, Coordinate $location = null): ServiceSearch
     {
         if ($order === static::ORDER_DISTANCE) {
             $this->query['sort'] = [
@@ -265,7 +265,7 @@ class ElasticsearchSearch implements Search
      * @param int $radius
      * @return \App\Contracts\Search
      */
-    public function applyRadius(Coordinate $location, int $radius): Search
+    public function applyRadius(Coordinate $location, int $radius): ServiceSearch
     {
         $this->query['query']['bool']['filter'][] = [
             'nested' => [
@@ -282,7 +282,7 @@ class ElasticsearchSearch implements Search
         return $this;
     }
 
-    public function applyEligibilities(array $eligibilityNames): Search
+    public function applyEligibilities(array $eligibilityNames): ServiceSearch
     {
         $eligibilities = Taxonomy::whereIn('name', $eligibilityNames)->get();
         $eligibilityIds = $eligibilities->pluck('id')->all();
@@ -437,7 +437,7 @@ class ElasticsearchSearch implements Search
      * @param array $response
      * @return \App\Search\ElasticsearchSearch
      */
-    protected function logMetrics(array $response): Search
+    protected function logMetrics(array $response): ServiceSearch
     {
         SearchHistory::create([
             'query' => $this->query,

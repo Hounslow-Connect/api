@@ -3,6 +3,7 @@
 namespace Tests;
 
 use App\Models\Collection;
+use App\Models\OrganisationEvent;
 use App\Models\Service;
 use App\Models\Taxonomy;
 use Illuminate\Database\Eloquent\Model;
@@ -141,9 +142,11 @@ abstract class TestCase extends BaseTestCase
     {
         if (!$this instanceof UsesElasticsearch) {
             Service::disableSearchSyncing();
+            OrganisationEvent::disableSearchSyncing();
             return;
         } else {
             Service::enableSearchSyncing();
+            OrganisationEvent::enableSearchSyncing();
         }
 
         if (!static::$elasticsearchInitialised) {
@@ -159,9 +162,11 @@ abstract class TestCase extends BaseTestCase
     {
         if (!$this instanceof UsesElasticsearch) {
             Service::disableSearchSyncing();
+            OrganisationEvent::disableSearchSyncing();
             return;
         } else {
             Service::enableSearchSyncing();
+            OrganisationEvent::enableSearchSyncing();
         }
 
         try {

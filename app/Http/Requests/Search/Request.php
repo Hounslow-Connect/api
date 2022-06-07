@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Search;
 
-use App\Contracts\Search;
+use App\Contracts\ServiceSearch;
 use App\Models\Service;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,7 +38,7 @@ class Request extends FormRequest
                 Service::WAIT_TIME_LONGER,
             ])],
             'is_free' => ['required_without_all:query,category,persona,wait_time,location,eligibilities', 'boolean'],
-            'order' => [Rule::in([Search::ORDER_RELEVANCE, Search::ORDER_DISTANCE])],
+            'order' => [Rule::in([ServiceSearch::ORDER_RELEVANCE, ServiceSearch::ORDER_DISTANCE])],
             'location' => ['required_without_all:query,category,persona,wait_time,is_free,eligibilities', 'required_if:order,distance', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'min:-90', 'max:90'],
             'location.lon' => ['required_with:location', 'numeric', 'min:-180', 'max:180'],

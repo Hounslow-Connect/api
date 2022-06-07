@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Http\Requests\OrganisationEvent\UpdateRequest as UpdateOrganisationEventRequest;
+use App\Models\IndexConfigurators\EventsIndexConfigurator;
 use App\Models\Mutators\OrganisationEventMutators;
 use App\Models\Relationships\OrganisationEventRelationships;
 use App\Models\Scopes\OrganisationEventScopes;
@@ -16,6 +17,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
+use ScoutElastic\Searchable;
 
 class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxonomyRelationships
 {
@@ -24,6 +26,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
     use OrganisationEventScopes;
     use UpdateRequests;
     use UpdateTaxonomyRelationships;
+    use Searchable;
 
     /**
      * The attributes that should be cast to native types.
@@ -49,6 +52,105 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
         'created_at',
         'updated_at',
     ];
+
+    /**
+     * The Elasticsearch index configuration class.
+     *
+     * @var string
+     */
+    protected $indexConfigurator = EventsIndexConfigurator::class;
+
+    /**
+     * Allows you to set different search algorithms.
+     *
+     * @var array
+     */
+    protected $searchRules = [
+        //
+    ];
+
+    /**
+     * The mapping for the fields.
+     *
+     * @var array
+     */
+    protected $mapping = [
+        'properties' => [
+            'id' => ['type' => 'keyword'],
+            'enabled' => ['type' => 'boolean'],
+            'title' => [
+                'type' => 'text',
+                'fields' => [
+                    'keyword' => ['type' => 'keyword'],
+                ],
+            ],
+            'intro' => ['type' => 'text'],
+            'description' => ['type' => 'text'],
+            'start_date' => ['type' => 'date'],
+            'end_date' => ['type' => 'date'],
+            'start_time' => ['type' => 'text'],
+            'end_time' => ['type' => 'text'],
+            'is_free' => ['type' => 'boolean'],
+            'is_virtual' => ['type' => 'boolean'],
+            'organisation_name' => [
+                'type' => 'text',
+                'fields' => [
+                    'keyword' => ['type' => 'keyword'],
+                ],
+            ],
+            'taxonomy_categories' => [
+                'type' => 'text',
+                'fields' => [
+                    'keyword' => ['type' => 'keyword'],
+                ],
+            ],
+            'collection_categories' => ['type' => 'keyword'],
+            'event_location' => [
+                'type' => 'nested',
+                'properties' => [
+                    'id' => ['type' => 'keyword'],
+                    'location' => ['type' => 'geo_point'],
+                ],
+            ],
+        ],
+    ];
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array
+     */
+    public function toSearchableArray()
+    {
+        $organisationEvent = [
+            'id' => $this->id,
+            'title' => $this->title,
+            'intro' => $this->intro,
+            'description' => $this->description,
+            'start_date' => $this->start_date->toDateString(),
+            'end_date' => $this->end_date->toDateString(),
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+            'is_free' => $this->is_free,
+            'is_virtual' => $this->is_virtual,
+            'organisation_name' => $this->organisation->name,
+            'taxonomy_categories' => $this->taxonomies()->pluck('name')->toArray(),
+            'collection_categories' => $this->collections()->pluck('name')->toArray(),
+            'event_location' => null,
+        ];
+
+        if (!$this->is_virtual) {
+            $organisationEvent['event_location'] = [
+                'id' => $this->location->id,
+                'location' => [
+                    'lat' => $this->location->location->lat,
+                    'lon' => $this->location->location->lon,
+                ],
+            ];
+        }
+
+        return $organisationEvent;
+    }
 
     /**
      * Check if the update request is valid.

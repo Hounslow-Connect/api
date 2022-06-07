@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Core\V1;
+namespace App\Http\Controllers\Core\V1\Search;
 
-use App\Contracts\ServiceSearch;
+use App\Contracts\EventSearch;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Search\Request;
+use App\Http\Requests\Search\Events\Request;
 use App\Support\Coordinate;
 
-class SearchController extends Controller
+class EventController extends Controller
 {
     /**
-     * @param \App\Contracts\ServiceSearch $search
+     * @param \App\Contracts\EventSearch $search
      * @param \App\Http\Requests\Search\Request $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function __invoke(ServiceSearch $search, Request $request)
+    public function __invoke(EventSearch $search, Request $request)
     {
         // Apply query.
         if ($request->has('query')) {
@@ -24,14 +24,6 @@ class SearchController extends Controller
         if ($request->has('category')) {
             // If category given then filter by category.
             $search->applyCategory($request->category);
-        } elseif ($request->has('persona')) {
-            // Otherwise, if persona given then filter by persona.
-            $search->applyPersona($request->persona);
-        }
-
-        // Apply filter on `wait_time` field.
-        if ($request->has('wait_time')) {
-            $search->applyWaitTime($request->wait_time);
         }
 
         // Apply filter on `is_free` field.
@@ -39,8 +31,14 @@ class SearchController extends Controller
             $search->applyIsFree($request->is_free);
         }
 
+        // Apply filter on `is_virtual` field.
+        if ($request->has('is_virtual')) {
+            $search->applyIsVirtual($request->is_virtual);
+        }
+
         // If location was passed, then parse the location.
-        if ($request->has('location')) {
+        if ($request->has('location') && !$request->is_virtual ?? false) {
+            $search->applyIsVirtual(false);
             $location = new Coordinate(
                 $request->input('location.lat'),
                 $request->input('location.lon')
@@ -48,10 +46,6 @@ class SearchController extends Controller
 
             // Apply radius filtering.
             $search->applyRadius($location, $request->input('distance', config('ck.search_distance')));
-        }
-
-        if ($request->has('eligibilities')) {
-            $search->applyEligibilities($request->input('eligibilities'));
         }
 
         // Apply order.

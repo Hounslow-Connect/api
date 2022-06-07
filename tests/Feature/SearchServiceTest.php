@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use Tests\UsesElasticsearch;
 
-class SearchTest extends TestCase implements UsesElasticsearch
+class SearchServiceTest extends TestCase implements UsesElasticsearch
 {
     /**
      * Setup the test environment.
