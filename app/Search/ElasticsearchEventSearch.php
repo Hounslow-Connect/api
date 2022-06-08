@@ -260,7 +260,7 @@ class ElasticsearchEventSearch implements EventSearch
      * @param string $startsAfter
      * @param string $endsBefore
      * @return \App\Contracts\Search
-     **/
+     */
     public function applyDateRange(string $startsAfter = null, string $endsBefore = null): EventSearch
     {
         if ($startsAfter) {

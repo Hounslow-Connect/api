@@ -303,7 +303,7 @@ class OrganisationEventsTest extends TestCase
             'is_virtual' => true,
         ]);
 
-        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=1");
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[has_wheelchair_access]=1");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent2->id]);
@@ -312,7 +312,7 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonMissing(['id' => $organisationEvent3->id]);
         $response->assertJsonMissing(['id' => $organisationEvent5->id]);
 
-        $response = $this->json('GET', "/core/v1/organisation-events?filter[induction-loop]=1");
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[has_induction_loop]=1");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent3->id]);
@@ -321,7 +321,7 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonMissing(['id' => $organisationEvent2->id]);
         $response->assertJsonMissing(['id' => $organisationEvent5->id]);
 
-        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=1&filter[induction-loop]=1");
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[has_wheelchair_access]=1&filter[has_induction_loop]=1");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent4->id]);
@@ -330,7 +330,7 @@ class OrganisationEventsTest extends TestCase
         $response->assertJsonMissing(['id' => $organisationEvent3->id]);
         $response->assertJsonMissing(['id' => $organisationEvent5->id]);
 
-        $response = $this->json('GET', "/core/v1/organisation-events?filter[wheelchair]=0");
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[has_wheelchair_access]=0");
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $organisationEvent1->id]);

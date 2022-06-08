@@ -64,7 +64,7 @@ trait OrganisationEventScopes
             $query->select(DB::raw(1))
                 ->from($locationsTable)
                 ->whereRaw("$locationsTable.id = {$this->getTable()}.location_id")
-                ->where("$locationsTable.has_wheelchair_access", (bool) $required);
+                ->where("$locationsTable.has_wheelchair_access", (bool)$required);
         });
     }
 
@@ -80,7 +80,7 @@ trait OrganisationEventScopes
             $query->select(DB::raw(1))
                 ->from($locationsTable)
                 ->whereRaw("$locationsTable.id = {$this->getTable()}.location_id")
-                ->where("$locationsTable.has_induction_loop", (bool) $required);
+                ->where("$locationsTable.has_induction_loop", (bool)$required);
         });
     }
 
@@ -107,9 +107,9 @@ trait OrganisationEventScopes
      */
     public function scopeCollectionTaxonomies(Builder $query): Builder
     {
-        return $query->from((new CollectionTaxonomy)->getTable())->whereIn('taxonomy_id', function ($query) {
+        return $query->from((new CollectionTaxonomy())->getTable())->whereIn('taxonomy_id', function ($query) {
             $query->select('taxonomy_id')
-                ->from((new OrganisationEventTaxonomy)->getTable())
+                ->from((new OrganisationEventTaxonomy())->getTable())
                 ->where('organisation_event_id', $this->id);
         });
     }
@@ -121,13 +121,13 @@ trait OrganisationEventScopes
      */
     public function scopeCollections(Builder $query): Builder
     {
-        return $query->from((new Collection)->getTable())
+        return $query->from((new Collection())->getTable())
             ->where('type', Collection::TYPE_ORGANISATION_EVENT)
             ->whereIn('id', function ($query) {
-                $query->from((new CollectionTaxonomy)->getTable())
+                $query->from((new CollectionTaxonomy())->getTable())
                     ->whereIn('taxonomy_id', function ($query) {
                         $query->select('taxonomy_id')
-                            ->from((new OrganisationEventTaxonomy)->getTable())
+                            ->from((new OrganisationEventTaxonomy())->getTable())
                             ->where('organisation_event_id', $this->id);
                     })->select('collection_id');
             });

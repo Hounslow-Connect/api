@@ -89,7 +89,7 @@ class Request extends FormRequest
                     EventSearch::ORDER_DISTANCE,
                     EventSearch::ORDER_START,
                     EventSearch::ORDER_END,
-                ])],
+                ]), ],
         ];
     }
 }

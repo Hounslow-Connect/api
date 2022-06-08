@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Models;
 
-use App\Contracts\Search;
+use App\Contracts\ServiceSearch as Search;
 use App\Models\Audit;
 use App\Models\Location;
 use App\Models\Organisation;
@@ -845,8 +845,8 @@ class ReportTest extends TestCase
             $updateRequest->created_at->format(CarbonImmutable::ISO8601),
             $updateRequest->isApproved() ? 'Approved' : 'Declined',
             $updateRequest->isApproved()
-                ? $updateRequest->approved_at->format(CarbonImmutable::ISO8601)
-                : $updateRequest->deleted_at->format(CarbonImmutable::ISO8601),
+            ? $updateRequest->approved_at->format(CarbonImmutable::ISO8601)
+            : $updateRequest->deleted_at->format(CarbonImmutable::ISO8601),
             $actioningUser->full_name,
         ], $csv[1]);
     }
