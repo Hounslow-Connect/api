@@ -36,6 +36,16 @@ class EventController extends Controller
             $search->applyIsVirtual($request->is_virtual);
         }
 
+        // Apply filter on `has_wheelchair_access` field.
+        if ($request->has('has_wheelchair_access')) {
+            $search->applyHasWheelchairAccess($request->has_wheelchair_access);
+        }
+
+        // Apply filter on `has_induction_loop` field.
+        if ($request->has('has_induction_loop')) {
+            $search->applyHasInductionLoop($request->has_induction_loop);
+        }
+
         // If location was passed, then parse the location.
         if ($request->has('location') && !$request->is_virtual ?? false) {
             $search->applyIsVirtual(false);

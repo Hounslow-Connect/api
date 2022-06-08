@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Collection;
+use App\Models\Location;
 use App\Models\OrganisationEvent;
 use App\Models\Taxonomy;
 use Illuminate\Http\Response;
@@ -567,6 +568,58 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $virtualEvent->id]);
+        $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByHasWheelchair()
+    {
+        $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
+        $virtualEvent = factory(OrganisationEvent::class)->create();
+        $locatedEventWheelchairAccess = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_wheelchair_access' => true,
+                ])->id;
+            },
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'has_wheelchair_access' => true,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $locatedEventWheelchairAccess->id]);
+        $response->assertJsonMissing(['id' => $virtualEvent->id]);
+        $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByHasInductionLoop()
+    {
+        $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
+        $virtualEvent = factory(OrganisationEvent::class)->create();
+        $locatedEventInductionLoop = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_induction_loop' => true,
+                ])->id;
+            },
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'has_induction_loop' => true,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $locatedEventInductionLoop->id]);
+        $response->assertJsonMissing(['id' => $virtualEvent->id]);
         $response->assertJsonMissing(['id' => $locatedEvent->id]);
     }
 

@@ -181,6 +181,46 @@ class ElasticsearchEventSearch implements EventSearch
     }
 
     /**
+     * @param bool $hasWheelchairAccess
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyHasWheelchairAccess(bool $hasWheelchairAccess): EventSearch
+    {
+        $this->query['query']['bool']['filter'][] = [
+            'nested' => [
+                'path' => 'event_location',
+                'query' => [
+                    'term' => [
+                        'event_location.has_wheelchair_access' => $hasWheelchairAccess,
+                    ],
+                ],
+            ],
+        ];
+
+        return $this;
+    }
+
+    /**
+     * @param bool $hasInductionLoop
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyHasInductionLoop(bool $hasInductionLoop): EventSearch
+    {
+        $this->query['query']['bool']['filter'][] = [
+            'nested' => [
+                'path' => 'event_location',
+                'query' => [
+                    'term' => [
+                        'event_location.has_induction_loop' => $hasInductionLoop,
+                    ],
+                ],
+            ],
+        ];
+
+        return $this;
+    }
+
+    /**
      * @param string $order
      * @param \App\Support\Coordinate|null $location
      * @return \App\Search\ElasticsearchEventSearch

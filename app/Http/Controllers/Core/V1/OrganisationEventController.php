@@ -54,8 +54,8 @@ class OrganisationEventController extends Controller
                 Filter::scope('starts_after'),
                 Filter::scope('ends_before'),
                 Filter::scope('ends_after'),
-                Filter::scope('wheelchair', 'hasWheelchairAccess'),
-                Filter::scope('induction-loop', 'hasInductionLoop'),
+                Filter::scope('has_wheelchair_access', 'hasWheelchairAccess'),
+                Filter::scope('has_induction_loop', 'hasInductionLoop'),
                 Filter::scope('collections', 'inCollections'),
             ])
             ->allowedIncludes(['organisation'])

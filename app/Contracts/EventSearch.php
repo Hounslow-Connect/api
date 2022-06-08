@@ -44,6 +44,18 @@ interface EventSearch
     public function applyIsVirtual(bool $isVirtual): EventSearch;
 
     /**
+     * @param bool $hasWheelchairAccess
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyHasWheelchairAccess(bool $hasWheelchairAccess): EventSearch;
+
+    /**
+     * @param bool $hasInductionLoop
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyHasInductionLoop(bool $hasInductionLoop): EventSearch;
+
+    /**
      * @param \App\Support\Coordinate $location
      * @param int $radius
      * @return \App\Contracts\EventSearch

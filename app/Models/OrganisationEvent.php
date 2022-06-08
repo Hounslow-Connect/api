@@ -92,6 +92,8 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
             'end_time' => ['type' => 'text'],
             'is_free' => ['type' => 'boolean'],
             'is_virtual' => ['type' => 'boolean'],
+            'has_wheelchair_access' => ['type' => 'boolean'],
+            'has_induction_loop' => ['type' => 'boolean'],
             'organisation_name' => [
                 'type' => 'text',
                 'fields' => [
@@ -110,6 +112,8 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
                 'properties' => [
                     'id' => ['type' => 'keyword'],
                     'location' => ['type' => 'geo_point'],
+                    'has_wheelchair_access' => ['type' => 'boolean'],
+                    'has_induction_loop' => ['type' => 'boolean'],
                 ],
             ],
         ],
@@ -146,6 +150,8 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
                     'lat' => $this->location->lat,
                     'lon' => $this->location->lon,
                 ],
+                'has_wheelchair_access' => $this->location->has_wheelchair_access,
+                'has_induction_loop' => $this->location->has_induction_loop,
             ];
         }
 
