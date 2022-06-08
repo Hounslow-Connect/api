@@ -65,6 +65,44 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
+    public function searchEventsMatchSingleWordFromTitle()
+    {
+        $event = factory(OrganisationEvent::class)->create([
+            'title' => 'Quick Brown Fox',
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'query' => 'brown',
+            'page' => 1,
+            'per_page' => 20,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $event->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsMatchMultipleWordsFromTitle()
+    {
+        $event = factory(OrganisationEvent::class)->create([
+            'title' => 'Quick Brown Fox',
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'query' => 'quick fox',
+            'page' => 1,
+            'per_page' => 20,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $event->id]);
+    }
+
+    /**
+     * @test
+     */
     public function searchEventsMatchIntro()
     {
         $event = factory(OrganisationEvent::class)->create();
@@ -496,6 +534,23 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $futureEvent->id]);
         $response->assertJsonMissing(['id' => $pastEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByisFree()
+    {
+        $paidEvent = factory(OrganisationEvent::class)->states('nonFree')->create();
+        $freeEvent = factory(OrganisationEvent::class)->create();
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'is_free' => true,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $freeEvent->id]);
+        $response->assertJsonMissing(['id' => $paidEvent->id]);
     }
 
     /**
