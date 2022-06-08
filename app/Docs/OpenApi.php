@@ -72,6 +72,7 @@ class OpenApi extends BaseOpenApi implements Responsable
                 Paths\Reports\ReportsNestedPath::create(),
                 Paths\Reports\ReportsDownloadPath::create(),
                 Paths\Search\SearchRootPath::create(),
+                Paths\Search\SearchEventsPath::create(),
                 Paths\ServiceLocations\ServiceLocationsRootPath::create(),
                 Paths\ServiceLocations\ServiceLocationsIndexPath::create(),
                 Paths\ServiceLocations\ServiceLocationsNestedPath::create(),

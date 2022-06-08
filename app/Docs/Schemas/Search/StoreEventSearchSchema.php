@@ -2,12 +2,11 @@
 
 namespace App\Docs\Schemas\Search;
 
-use App\Contracts\ServiceSearch as Search;
-use App\Models\Service;
+use App\Contracts\EventSearch as Search;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\BaseObject;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\Schema;
 
-class StoreSearchSchema extends Schema
+class StoreEventSearchSchema extends Schema
 {
     /**
      * @param string|null $objectId
@@ -24,18 +23,14 @@ class StoreSearchSchema extends Schema
                     ->default(config('ck.pagination_results')),
                 Schema::string('query'),
                 Schema::string('category'),
-                Schema::string('persona'),
-                Schema::string('wait_time')
-                    ->enum(
-                        Service::WAIT_TIME_ONE_WEEK,
-                        Service::WAIT_TIME_TWO_WEEKS,
-                        Service::WAIT_TIME_THREE_WEEKS,
-                        Service::WAIT_TIME_MONTH,
-                        Service::WAIT_TIME_LONGER
-                    ),
                 Schema::boolean('is_free'),
+                Schema::boolean('is_virtual'),
+                Schema::boolean('has_wheelchair_access'),
+                Schema::boolean('has_induction_loop'),
+                Schema::string('starts_after'),
+                Schema::string('ends_before'),
                 Schema::string('order')
-                    ->enum(Search::ORDER_RELEVANCE, Search::ORDER_DISTANCE)
+                    ->enum(Search::ORDER_RELEVANCE, Search::ORDER_DISTANCE, Search::ORDER_START, Search::ORDER_END)
                     ->default('relevance'),
                 Schema::object('location')
                     ->required('lat', 'lon')
