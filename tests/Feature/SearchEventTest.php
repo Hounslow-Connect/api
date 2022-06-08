@@ -556,6 +556,23 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
+    public function searchEventsFilterByisVirtual()
+    {
+        $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
+        $virtualEvent = factory(OrganisationEvent::class)->create();
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'is_virtual' => true,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $virtualEvent->id]);
+        $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
     public function searchEventsReturnsPaginatedResultSet()
     {
         $events = factory(OrganisationEvent::class, 30)->create([

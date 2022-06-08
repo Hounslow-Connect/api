@@ -143,8 +143,8 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
             $organisationEvent['event_location'] = [
                 'id' => $this->location->id,
                 'location' => [
-                    'lat' => $this->location->location->lat,
-                    'lon' => $this->location->location->lon,
+                    'lat' => $this->location->lat,
+                    'lon' => $this->location->lon,
                 ],
             ];
         }
