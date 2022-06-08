@@ -513,33 +513,6 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
-    public function searchEventsOnlyFutureDatesReturned()
-    {
-        $futureEvent = factory(OrganisationEvent::class)->create([
-            'title' => 'Testing Dates',
-            'start_date' => $this->faker->dateTimeBetween('+1 week', '+2 weeks'),
-            'end_date' => $this->faker->dateTimeBetween('+2 week', '+3 weeks'),
-        ]);
-        $pastEvent = factory(OrganisationEvent::class)->create([
-            'title' => 'Testing Dates',
-            'start_date' => $this->faker->dateTimeBetween('-3 week', '-2 weeks'),
-            'end_date' => $this->faker->dateTimeBetween('-2 week', '-1 weeks'),
-        ]);
-
-        $response = $this->json('POST', '/core/v1/search/events', [
-            'query' => 'Testing Dates',
-            'page' => 1,
-            'per_page' => 20,
-        ]);
-
-        $response->assertStatus(Response::HTTP_OK);
-        $response->assertJsonFragment(['id' => $futureEvent->id]);
-        $response->assertJsonMissing(['id' => $pastEvent->id]);
-    }
-
-    /**
-     * @test
-     */
     public function searchEventsFilterByisFree()
     {
         $paidEvent = factory(OrganisationEvent::class)->states('nonFree')->create();
@@ -557,6 +530,23 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
+    public function searchEventsFilterByNotisFree()
+    {
+        $paidEvent = factory(OrganisationEvent::class)->states('nonFree')->create();
+        $freeEvent = factory(OrganisationEvent::class)->create();
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'is_free' => false,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonMissing(['id' => $freeEvent->id]);
+        $response->assertJsonFragment(['id' => $paidEvent->id]);
+    }
+
+    /**
+     * @test
+     */
     public function searchEventsFilterByisVirtual()
     {
         $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
@@ -569,6 +559,23 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $virtualEvent->id]);
         $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByNotisVirtual()
+    {
+        $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
+        $virtualEvent = factory(OrganisationEvent::class)->create();
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'is_virtual' => false,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonMissing(['id' => $virtualEvent->id]);
+        $response->assertJsonFragment(['id' => $locatedEvent->id]);
     }
 
     /**
@@ -621,6 +628,165 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
         $response->assertJsonFragment(['id' => $locatedEventInductionLoop->id]);
         $response->assertJsonMissing(['id' => $virtualEvent->id]);
         $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsOnlyFutureDatesReturned()
+    {
+        $futureEvent = factory(OrganisationEvent::class)->create([
+            'title' => 'Testing Dates',
+            'start_date' => $this->faker->dateTimeBetween('+1 week', '+2 weeks'),
+            'end_date' => $this->faker->dateTimeBetween('+2 week', '+3 weeks'),
+        ]);
+        $pastEvent = factory(OrganisationEvent::class)->create([
+            'title' => 'Testing Dates',
+            'start_date' => $this->faker->dateTimeBetween('-3 week', '-2 weeks'),
+            'end_date' => $this->faker->dateTimeBetween('-2 week', '-1 weeks'),
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'query' => 'Testing Dates',
+            'page' => 1,
+            'per_page' => 20,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $futureEvent->id]);
+        $response->assertJsonMissing(['id' => $pastEvent->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByStartsAfter()
+    {
+        $date1 = $this->faker->dateTimeBetween('+3 days', '+1 weeks');
+        $date2 = $this->faker->dateTimeBetween('+2 week', '+3 weeks');
+        $date3 = $this->faker->dateTimeBetween('+1 days', '+2 days');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date1->format('Y-m-d'),
+            'end_date' => $date1->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date2->format('Y-m-d'),
+            'end_date' => $date2->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date3->format('Y-m-d'),
+            'end_date' => $date3->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $from = clone $date1;
+        $from->modify('-1 day');
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'starts_after' => $from->format('Y-m-d'),
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByEndsBefore()
+    {
+        $date1 = $this->faker->dateTimeBetween('+3 days', '+1 weeks');
+        $date2 = $this->faker->dateTimeBetween('+2 week', '+3 weeks');
+        $date3 = $this->faker->dateTimeBetween('+1 days', '+2 days');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date1->format('Y-m-d'),
+            'end_date' => $date1->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date2->format('Y-m-d'),
+            'end_date' => $date2->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date3->format('Y-m-d'),
+            'end_date' => $date3->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $to = clone $date1;
+        $to->modify('+1 day');
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'ends_before' => $to->format('Y-m-d'),
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+    }
+
+    /**
+     * @test
+     */
+    public function searchEventsFilterByDateRange()
+    {
+        $date1 = $this->faker->dateTimeBetween('+3 days', '+1 weeks');
+        $date2 = $this->faker->dateTimeBetween('+2 week', '+3 weeks');
+        $date3 = $this->faker->dateTimeBetween('+1 days', '+2 days');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date1->format('Y-m-d'),
+            'end_date' => $date1->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date2->format('Y-m-d'),
+            'end_date' => $date2->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date3->format('Y-m-d'),
+            'end_date' => $date3->format('Y-m-d'),
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $from = clone $date1;
+        $to = clone $date1;
+        $from->modify('-1 day');
+        $to->modify('+1 day');
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'starts_after' => $from->format('Y-m-d'),
+            'ends_before' => $to->format('Y-m-d'),
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent3->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
     }
 
     /**

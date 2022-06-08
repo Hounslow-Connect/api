@@ -257,6 +257,31 @@ class ElasticsearchEventSearch implements EventSearch
     }
 
     /**
+     * @param string $startsAfter
+     * @param string $endsBefore
+     * @return \App\Contracts\Search
+     **/
+    public function applyDateRange(string $startsAfter = null, string $endsBefore = null): EventSearch
+    {
+        if ($startsAfter) {
+            $this->query['query']['bool']['filter'][] = [
+                'range' => [
+                    'start_date' => ['gte' => $startsAfter],
+                ],
+            ];
+        }
+        if ($endsBefore) {
+            $this->query['query']['bool']['filter'][] = [
+                'range' => [
+                    'end_date' => ['lte' => $endsBefore],
+                ],
+            ];
+        }
+
+        return $this;
+    }
+
+    /**
      * @param \App\Support\Coordinate $location
      * @param int $radius
      * @return \App\Contracts\Search

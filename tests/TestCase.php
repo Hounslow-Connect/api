@@ -171,6 +171,7 @@ abstract class TestCase extends BaseTestCase
 
         try {
             $this->artisan('scout:flush', ['model' => Service::class]);
+            $this->artisan('scout:flush', ['model' => OrganisationEvent::class]);
         } catch (\Exception $exception) {
             // Do nothing.
         }

@@ -56,6 +56,13 @@ interface EventSearch
     public function applyHasInductionLoop(bool $hasInductionLoop): EventSearch;
 
     /**
+     * @param string $startsAfter
+     * @param string $endsBefore
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyDateRange(string $startsAfter, string $endsBefore): EventSearch;
+
+    /**
      * @param \App\Support\Coordinate $location
      * @param int $radius
      * @return \App\Contracts\EventSearch

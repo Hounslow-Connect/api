@@ -46,6 +46,11 @@ class EventController extends Controller
             $search->applyHasInductionLoop($request->has_induction_loop);
         }
 
+        // Apply filter on `starts_after` field.
+        if ($request->has('starts_after') || $request->has('ends_before')) {
+            $search->applyDateRange($request->input('starts_after'), $request->input('ends_before'));
+        }
+
         // If location was passed, then parse the location.
         if ($request->has('location') && !$request->is_virtual ?? false) {
             $search->applyIsVirtual(false);
