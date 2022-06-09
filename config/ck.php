@@ -62,7 +62,7 @@ return [
     /*
      * The distance (in miles) that the search results should limit up to.
      */
-    'search_distance' => 15,
+    'search_distance' => 5,
 
     /*
      * The dimensions to automatically generate resized images at.
