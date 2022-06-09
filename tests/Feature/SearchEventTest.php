@@ -749,7 +749,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
      */
     public function searchEventsFilterByDateRange()
     {
-        $date1 = $this->faker->dateTimeBetween('+3 days', '+1 weeks');
+        $date1 = $this->faker->dateTimeBetween('+4 days', '+1 weeks');
         $date2 = $this->faker->dateTimeBetween('+2 week', '+3 weeks');
         $date3 = $this->faker->dateTimeBetween('+1 days', '+2 days');
         $endtime = $this->faker->time('H:i:s', '+1 hour');
@@ -892,7 +892,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
-    public function searchEventsOrderByRelevanceWithLocationReturnServicesLessThan5MilesAway()
+    public function searchEventsOrderByRelevanceWithLocationReturnEventsLessThan5MilesAway()
     {
         $event1 = factory(OrganisationEvent::class)->create([
             'is_virtual' => false,
@@ -905,11 +905,12 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
         ]);
 
         $event2 = factory(OrganisationEvent::class)->create([
+            'title' => 'Test Name',
             'is_virtual' => false,
             'location_id' => function () {
                 return factory(Location::class)->create([
-                    'lat' => 45.01,
-                    'lon' => 90.01,
+                    'lat' => 45.001,
+                    'lon' => 90.001,
                 ])->id;
             },
         ]);

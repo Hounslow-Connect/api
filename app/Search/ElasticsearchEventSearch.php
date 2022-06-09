@@ -74,6 +74,7 @@ class ElasticsearchEventSearch implements EventSearch
         $should = &$this->query['query']['bool']['must']['bool']['should'];
 
         $should[] = $this->match('title', $term, 3);
+        $should[] = $this->match('organisation_name', $term, 3);
         $should[] = $this->match('intro', $term, 2);
         $should[] = $this->match('description', $term, 1.5);
         $should[] = $this->match('taxonomy_categories', $term);
@@ -428,7 +429,7 @@ class ElasticsearchEventSearch implements EventSearch
         return $events->filter(function (OrganisationEvent $event) {
             return !$event->is_virtual;
         })
-            ->each(function (OrganisationEvent $event) {
+            ->sortBy(function (OrganisationEvent $event) {
                 $location = $this->query['sort'][0]['_geo_distance']['event_location.location'];
                 $location = new Coordinate($location['lat'], $location['lon']);
 
