@@ -106,6 +106,7 @@ Route::prefix('/core/v1')
             Route::get('/organisation-events/{organisationEvent}/image.{suffix}', 'OrganisationEvent\\ImageController')
                 ->where('suffix', 'png|jpg|jpeg|svg')
                 ->name('organisation-events.image');
+            Route::get('/organisation-events/{organisationEvent}/event.ics', 'OrganisationEvent\\CalendarController');
 
             // Organisation Sign Up Forms.
             Route::apiResource('/organisation-sign-up-forms', 'OrganisationSignUpFormController')

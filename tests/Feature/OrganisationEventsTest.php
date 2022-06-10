@@ -1377,6 +1377,45 @@ class OrganisationEventsTest extends TestCase
     }
 
     /**
+     * @test
+     */
+    public function getSingleOrganisationEventIcalAsGuest200()
+    {
+        $organisationEvent = factory(OrganisationEvent::class)->states('notVirtual', 'withOrganiser')->create();
+
+        $now = new DateTime();
+        $start = $organisationEvent->start_date->copy();
+        list($startHour, $startMinute, $startSecond) = explode(':', $organisationEvent->start_time);
+        $start->hour($startHour)->minute($startMinute)->second($startSecond);
+        $end = $organisationEvent->end_date->copy();
+        list($endHour, $endMinute, $endSecond) = explode(':', $organisationEvent->end_time);
+        $end->hour($endHour)->minute($endMinute)->second($endSecond);
+
+        $iCalendar = implode(PHP_EOL, [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//hacksw/handcal//NONSGML v1.0//EN',
+            'BEGIN:VEVENT',
+            'UID:' . $organisationEvent->id,
+            'DTSTAMP:' . $now->format('Ymd\\THis\\Z'),
+            'ORGANIZER;CN=' . $organisationEvent->organiser_name . ':MAILTO:' . $organisationEvent->organiser_email,
+            'DTSTART:' . $start->format('Ymd\\THis\\Z'),
+            'DTEND:' . $end->format('Ymd\\THis\\Z'),
+            'SUMMARY:' . $organisationEvent->title,
+            'GEO:' . $organisationEvent->location->lat . ';' . $organisationEvent->location->lon,
+            'END:VEVENT',
+            'END:VCALENDAR',
+        ]);
+
+        $response = $this->get("/core/v1/organisation-events/{$organisationEvent->id}/event.ics");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertHeader('Content-Type', 'text/calendar; charset=UTF-8');
+
+        $this->assertEquals($iCalendar, $response->content());
+    }
+
+    /**
      * Update an OrganisationEvent
      */
 
