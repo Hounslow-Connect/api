@@ -38,6 +38,7 @@ class CalendarController extends Controller
             'DTSTART' => $start->format('Ymd\\THis\\Z'),
             'DTEND' => $end->format('Ymd\\THis\\Z'),
             'SUMMARY' => $organisationEvent->title,
+            'DESCRIPTION' => $organisationEvent->description,
             'GEO' => null,
             'END' => 'VEVENT',
         ];
@@ -73,7 +74,7 @@ class CalendarController extends Controller
         array_push($vEvent, 'END:VCALENDAR');
 
         return response(implode(
-            PHP_EOL,
+            "\r\n",
             $vEvent
         ))->header('Content-Type', 'text/calendar');
     }

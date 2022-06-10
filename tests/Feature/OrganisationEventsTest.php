@@ -1391,7 +1391,7 @@ class OrganisationEventsTest extends TestCase
         list($endHour, $endMinute, $endSecond) = explode(':', $organisationEvent->end_time);
         $end->hour($endHour)->minute($endMinute)->second($endSecond);
 
-        $iCalendar = implode(PHP_EOL, [
+        $iCalendar = implode("\r\n", [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             'PRODID:-//hacksw/handcal//NONSGML v1.0//EN',
@@ -1402,6 +1402,7 @@ class OrganisationEventsTest extends TestCase
             'DTSTART:' . $start->format('Ymd\\THis\\Z'),
             'DTEND:' . $end->format('Ymd\\THis\\Z'),
             'SUMMARY:' . $organisationEvent->title,
+            'DESCRIPTION:' . $organisationEvent->description,
             'GEO:' . $organisationEvent->location->lat . ';' . $organisationEvent->location->lon,
             'END:VEVENT',
             'END:VCALENDAR',
