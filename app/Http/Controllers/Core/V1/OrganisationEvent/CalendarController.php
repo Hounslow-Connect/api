@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Core\V1\OrganisationEvent;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrganisationEvent\Calendar\ShowRequest;
-use App\Models\File;
 use App\Models\OrganisationEvent;
 use DateTime;
 
@@ -57,12 +56,11 @@ class CalendarController extends Controller
 
         // Remove any empty rows
         $vEvent = array_filter($vEvent, function ($value) {
-            return !!$value;
+            return (bool)$value;
         });
 
         $vEvent = array_map(
             function ($key, $value) {
-
                 return $key === 'ORGANIZER' ? $key . ';' . $value : $key . ':' . $value;
             },
             array_keys($vEvent),
