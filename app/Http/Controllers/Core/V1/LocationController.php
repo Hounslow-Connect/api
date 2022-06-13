@@ -95,6 +95,7 @@ class LocationController extends Controller
                 'accessibility_info' => $request->accessibility_info,
                 'has_wheelchair_access' => $request->has_wheelchair_access,
                 'has_induction_loop' => $request->has_induction_loop,
+                'has_accessible_toilet' => $request->has_accessible_toilet,
                 'image_file_id' => $request->image_file_id,
             ]);
 
@@ -160,6 +161,7 @@ class LocationController extends Controller
                     'accessibility_info' => $request->missing('accessibility_info'),
                     'has_wheelchair_access' => $request->missing('has_wheelchair_access'),
                     'has_induction_loop' => $request->missing('has_induction_loop'),
+                    'has_accessible_toilet' => $request->missing('has_accessible_toilet'),
                     'image_file_id' => $request->missing('image_file_id'),
                 ]),
             ]);

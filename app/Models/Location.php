@@ -35,6 +35,7 @@ class Location extends Model implements AppliesUpdateRequests
         'lon' => 'float',
         'has_wheelchair_access' => 'boolean',
         'has_induction_loop' => 'boolean',
+        'has_accessible_toilet' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

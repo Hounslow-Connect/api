@@ -45,6 +45,7 @@ class UpdateRequest extends FormRequest
             'accessibility_info' => ['nullable', 'string', 'min:1', 'max:10000'],
             'has_wheelchair_access' => ['boolean'],
             'has_induction_loop' => ['boolean'],
+            'has_accessible_toilet' => ['boolean'],
             'image_file_id' => [
                 'nullable',
                 'exists:files,id',
