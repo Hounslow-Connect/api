@@ -18,7 +18,7 @@ class UpdateLocationsAddAccessibleToiletField extends Migration
         });
 
         Schema::table('locations', function (Blueprint $table) {
-            DB::table((new Location)->getTable())
+            DB::table((new Location())->getTable())
                 ->update(['has_accessible_toilet' => false]);
         });
     }
