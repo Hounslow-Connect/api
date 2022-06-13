@@ -53,6 +53,9 @@ class OrganisationEventSchema extends Schema
                     ->nullable(),
                 Schema::string('booking_cta')
                     ->nullable(),
+                Schema::string('google_calendar_link'),
+                Schema::string('microsoft_calendar_link'),
+                Schema::string('apple_calendar_link'),
                 Schema::boolean('has_image'),
                 Schema::boolean('homepage'),
                 Schema::boolean('is_virtual'),

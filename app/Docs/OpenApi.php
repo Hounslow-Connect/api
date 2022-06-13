@@ -57,6 +57,7 @@ class OpenApi extends BaseOpenApi implements Responsable
                 Paths\OrganisationEvents\OrganisationEventsIndexPath::create(),
                 Paths\OrganisationEvents\OrganisationEventsNestedPath::create(),
                 Paths\OrganisationEvents\OrganisationEventsImagePath::create(),
+                Paths\OrganisationEvents\OrganisationEventsIcsPath::create(),
                 Paths\OrganisationSignUpForms\OrganisationSignUpFormsRootPath::create(),
                 Paths\PageFeedbacks\PageFeedbacksRootPath::create(),
                 Paths\PageFeedbacks\PageFeedbacksIndexPath::create(),

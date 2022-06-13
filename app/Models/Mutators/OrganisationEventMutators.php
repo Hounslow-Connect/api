@@ -7,36 +7,38 @@ use DateTime;
 trait OrganisationEventMutators
 {
     /**
-     * Get the Start date time as a Carbon instance
+     * Get the Start date time as a Carbon instance.
      *
      * @return Carbon/CarbonImmutable
-     **/
+     */
     public function getStartDateTimeAttribute()
     {
         $start = $this->start_date->copy();
         list($startHour, $startMinute, $startSecond) = explode(':', $this->start_time);
         $start->hour($startHour)->minute($startMinute)->second($startSecond);
+
         return $start;
     }
 
     /**
-     * Get the End date time as a Carbon instance
+     * Get the End date time as a Carbon instance.
      *
      * @return Carbon/CarbonImmutable
-     **/
+     */
     public function getEndDateTimeAttribute()
     {
         $end = $this->end_date->copy();
         list($endHour, $endMinute, $endSecond) = explode(':', $this->end_time);
         $end->hour($endHour)->minute($endMinute)->second($endSecond);
+
         return $end;
     }
 
     /**
-     * Return a link which will add the event to a Google calendar
+     * Return a link which will add the event to a Google calendar.
      *
      * @return string
-     **/
+     */
     public function getGoogleCalendarLinkAttribute()
     {
         return sprintf(
@@ -54,10 +56,10 @@ trait OrganisationEventMutators
     }
 
     /**
-     * Return a link which will add the event to a Microsoft calendar
+     * Return a link which will add the event to a Microsoft calendar.
      *
      * @return string
-     **/
+     */
     public function getMicrosoftCalendarLinkAttribute()
     {
         return sprintf(
@@ -75,10 +77,10 @@ trait OrganisationEventMutators
     }
 
     /**
-     * Return a link which will return the .ics file which can be added to an Apple calendar
+     * Return a link which will return the .ics file which can be added to an Apple calendar.
      *
      * @return string
-     **/
+     */
     public function getAppleCalendarLinkAttribute()
     {
         return secure_url('/core/v1/organisation-events/' . $this->id . '/event.ics');
