@@ -1319,6 +1319,11 @@ class OrganisationEventsTest extends TestCase
             'booking_summary' => $organisationEvent->booking_summary,
             'booking_url' => $organisationEvent->booking_url,
             'booking_cta' => $organisationEvent->booking_cta,
+            'homepage' => $organisationEvent->homepage,
+            'is_virtual' => $organisationEvent->is_virtual,
+            'google_calendar_link' => $organisationEvent->googleCalendarLink,
+            'microsoft_calendar_link' => $organisationEvent->microsoftCalendarLink,
+            'apple_calendar_link' => $organisationEvent->appleCalendarLink,
             'location_id' => $organisationEvent->location_id,
             'organisation_id' => $organisationEvent->organisation_id,
             'category_taxonomies' => [],
@@ -1390,6 +1395,13 @@ class OrganisationEventsTest extends TestCase
         $end = $organisationEvent->end_date->copy();
         list($endHour, $endMinute, $endSecond) = explode(':', $organisationEvent->end_time);
         $end->hour($endHour)->minute($endMinute)->second($endSecond);
+        $urlsafeTitle = urlencode($organisationEvent->title);
+        $urlsafeIntro = urlencode($organisationEvent->intro);
+        $urlsafeLocation = urlencode(implode(',', [
+            $organisationEvent->location->address_line_1,
+            $organisationEvent->location->city,
+            $organisationEvent->location->postcode,
+        ]));
 
         $iCalendar = implode("\r\n", [
             'BEGIN:VCALENDAR',
@@ -1408,7 +1420,13 @@ class OrganisationEventsTest extends TestCase
             'END:VCALENDAR',
         ]);
 
-        $response = $this->get("/core/v1/organisation-events/{$organisationEvent->id}/event.ics");
+        $this->assertEquals('https://calendar.google.com/calendar/render?action=TEMPLATE&dates=' . urlencode($start->format('Ymd\\THis\\Z') . '/' . $end->format('Ymd\\THis\\Z')) . '&details=' . $urlsafeTitle . '&location=' . $urlsafeLocation . '&text=' . $urlsafeIntro, $organisationEvent->googleCalendarlink);
+
+        $this->assertEquals('https://outlook.office.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&startdt=' . urlencode($start->format(DateTime::ATOM)) . '&enddt=' . urlencode($end->format(DateTime::ATOM)) . '&subject=' . $urlsafeTitle . '&location=' . $urlsafeLocation . '&body=' . $urlsafeIntro, $organisationEvent->microsoftCalendarLink);
+
+        $this->assertEquals(secure_url('/core/v1/organisation-events/' . $organisationEvent->id . '/event.ics'), $organisationEvent->appleCalendarLink);
+
+        $response = $this->get($organisationEvent->appleCalendarLink);
 
         $response->assertStatus(Response::HTTP_OK);
         $response->assertHeader('Content-Type', 'text/calendar; charset=UTF-8');
