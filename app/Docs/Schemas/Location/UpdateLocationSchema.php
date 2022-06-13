@@ -42,6 +42,7 @@ class UpdateLocationSchema extends Schema
                     ->nullable(),
                 Schema::boolean('has_wheelchair_access'),
                 Schema::boolean('has_induction_loop'),
+                Schema::boolean('has_accessible_toilet'),
                 Schema::string('image_file_id')
                     ->format(Schema::FORMAT_UUID)
                     ->description('The ID of the file uploaded')
