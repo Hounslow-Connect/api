@@ -36,6 +36,7 @@ class LocationSchema extends Schema
                     ->nullable(),
                 Schema::boolean('has_wheelchair_access'),
                 Schema::boolean('has_induction_loop'),
+                Schema::boolean('has_accessible_toilet'),
                 Schema::string('created_at')
                     ->format(Schema::FORMAT_DATE_TIME)
                     ->nullable(),
