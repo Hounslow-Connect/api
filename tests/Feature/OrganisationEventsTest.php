@@ -382,6 +382,31 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
+    public function getAllOrganisationEventsOnlyRelatedOrganisationsAsOrganisationAdmin200()
+    {
+        $organisation1 = factory(Organisation::class)->create();
+        $organisation2 = factory(Organisation::class)->create();
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation1);
+
+        Passport::actingAs($user);
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation1->id,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'organisation_id' => $organisation2->id,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events?filter[has_permission]=true");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonMissing(['id' => $organisationEvent2->id]);
+    }
+
+    /**
+     * @test
+     */
     public function getAllOrganisationEventsCreatesAuditAsGuest200()
     {
         $this->fakeEvents();

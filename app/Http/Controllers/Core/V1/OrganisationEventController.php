@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Core\V1;
 
 use App\Events\EndpointHit;
 use App\Http\Controllers\Controller;
+use App\Http\Filters\OrganisationEvent\HasPermissionFilter;
 use App\Http\Requests\OrganisationEvent\DestroyRequest;
 use App\Http\Requests\OrganisationEvent\IndexRequest;
 use App\Http\Requests\OrganisationEvent\ShowRequest;
@@ -57,6 +58,7 @@ class OrganisationEventController extends Controller
                 Filter::scope('has_wheelchair_access', 'hasWheelchairAccess'),
                 Filter::scope('has_induction_loop', 'hasInductionLoop'),
                 Filter::scope('collections', 'inCollections'),
+                Filter::custom('has_permission', HasPermissionFilter::class),
             ])
             ->allowedIncludes(['organisation'])
             ->allowedSorts([
