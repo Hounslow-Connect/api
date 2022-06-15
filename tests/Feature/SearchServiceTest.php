@@ -434,7 +434,7 @@ class SearchServiceTest extends TestCase implements UsesElasticsearch
     {
         $service = factory(Service::class)->create();
         $serviceLocation = factory(ServiceLocation::class)->create(['service_id' => $service->id]);
-        DB::table('locations')->where('id', $serviceLocation->location->id)->update(['lat' => 19.9, 'lon' => 19.9]);
+        DB::table('locations')->where('id', $serviceLocation->location->id)->update(['lat' => 19.955, 'lon' => 19.955]);
         $service->save();
 
         $service2 = factory(Service::class)->create();
@@ -444,7 +444,7 @@ class SearchServiceTest extends TestCase implements UsesElasticsearch
 
         $service3 = factory(Service::class)->create();
         $serviceLocation3 = factory(ServiceLocation::class)->create(['service_id' => $service3->id]);
-        DB::table('locations')->where('id', $serviceLocation3->location->id)->update(['lat' => 20.15, 'lon' => 20.15]);
+        DB::table('locations')->where('id', $serviceLocation3->location->id)->update(['lat' => 20.05, 'lon' => 20.05]);
         $service3->save();
 
         $response = $this->json('POST', '/core/v1/search', [
@@ -458,6 +458,7 @@ class SearchServiceTest extends TestCase implements UsesElasticsearch
         $response->assertStatus(Response::HTTP_OK);
         $response->assertJsonFragment(['id' => $service2->id]);
         $hits = json_decode($response->getContent(), true)['data'];
+        $this->assertCount(3, $hits);
         $this->assertEquals($service2->id, $hits[0]['id']);
         $this->assertEquals($service->id, $hits[1]['id']);
         $this->assertEquals($service3->id, $hits[2]['id']);

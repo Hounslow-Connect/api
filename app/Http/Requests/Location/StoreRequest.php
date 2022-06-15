@@ -42,6 +42,7 @@ class StoreRequest extends FormRequest
             'accessibility_info' => ['present', 'nullable', 'string', 'min:1', 'max:10000'],
             'has_wheelchair_access' => ['required', 'boolean'],
             'has_induction_loop' => ['required', 'boolean'],
+            'has_accessible_toilet' => ['required', 'boolean'],
             'image_file_id' => [
                 'nullable',
                 'exists:files,id',

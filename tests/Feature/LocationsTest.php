@@ -45,6 +45,7 @@ class LocationsTest extends TestCase
             'accessibility_info',
             'has_wheelchair_access',
             'has_induction_loop',
+            'has_accessible_toilet',
             'created_at',
             'updated_at',
         ]);
@@ -63,6 +64,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => $location->accessibility_info,
             'has_wheelchair_access' => $location->has_wheelchair_access,
             'has_induction_loop' => $location->has_induction_loop,
+            'has_accessible_toilet' => $location->has_accessible_toilet,
             'created_at' => $location->created_at->format(CarbonImmutable::ISO8601),
             'updated_at' => $location->updated_at->format(CarbonImmutable::ISO8601),
         ]);
@@ -130,6 +132,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ]);
 
         $response->assertStatus(Response::HTTP_CREATED);
@@ -145,6 +148,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ]);
     }
 
@@ -171,6 +175,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -206,6 +211,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ]);
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $response) {
@@ -241,6 +247,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => $location->accessibility_info,
             'has_wheelchair_access' => $location->has_wheelchair_access,
             'has_induction_loop' => $location->has_induction_loop,
+            'has_accessible_toilet' => $location->has_accessible_toilet,
             'created_at' => $location->created_at->format(CarbonImmutable::ISO8601),
             'updated_at' => $location->updated_at->format(CarbonImmutable::ISO8601),
         ]);
@@ -315,6 +322,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ];
         $response = $this->json('PUT', "/core/v1/locations/{$location->id}", $payload);
 
@@ -359,6 +367,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ]);
 
         Event::assertDispatched(EndpointHit::class, function (EndpointHit $event) use ($user, $location) {
@@ -597,6 +606,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
             'image_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
         ]);
         $locationId = $this->getResponseContent($response, 'data.id');
@@ -636,6 +646,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => $location->accessibility_info,
             'has_wheelchair_access' => $location->has_wheelchair_access,
             'has_induction_loop' => $location->has_induction_loop,
+            'has_accessible_toilet' => $location->has_accessible_toilet,
             'image_file_id' => null,
         ];
 
@@ -669,6 +680,7 @@ class LocationsTest extends TestCase
             'accessibility_info' => null,
             'has_wheelchair_access' => false,
             'has_induction_loop' => false,
+            'has_accessible_toilet' => false,
         ];
         $response = $this->json('PUT', "/core/v1/locations/{$location->id}", $payload);
 

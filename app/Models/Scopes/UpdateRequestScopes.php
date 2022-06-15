@@ -84,6 +84,20 @@ trait UpdateRequestScopes
 
     /**
      * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param int $id
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOrganisationEventId(Builder $query, $id): Builder
+    {
+        $ids = explode(',', $id);
+
+        return $query
+            ->where('updateable_type', UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT)
+            ->whereIn('updateable_id', $ids);
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string $alias
      * @return \Illuminate\Database\Eloquent\Builder
      */

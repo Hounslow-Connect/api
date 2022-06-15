@@ -30,6 +30,7 @@ class LocationResource extends JsonResource
             'accessibility_info' => $this->accessibility_info,
             'has_wheelchair_access' => $this->has_wheelchair_access,
             'has_induction_loop' => $this->has_induction_loop,
+            'has_accessible_toilet' => $this->has_accessible_toilet,
             'created_at' => $this->created_at->format(CarbonImmutable::ISO8601),
             'updated_at' => $this->updated_at->format(CarbonImmutable::ISO8601),
         ];

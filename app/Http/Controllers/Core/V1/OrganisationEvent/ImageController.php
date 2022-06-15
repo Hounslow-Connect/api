@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\OrganisationEvent\Image\ShowRequest;
 use App\Models\File;
 use App\Models\OrganisationEvent;
+use App\Models\UpdateRequest;
 
 class ImageController extends Controller
 {
@@ -24,6 +25,18 @@ class ImageController extends Controller
 
         // Get the image file associated.
         $file = File::find($organisationEvent->image_file_id);
+
+        // Use the file from an update request instead, if specified.
+        if ($request->has('update_request_id')) {
+            $imageFileId = UpdateRequest::query()
+                ->organisationEventId($organisationEvent->id)
+                ->where('id', '=', $request->update_request_id)
+                ->firstOrFail()
+                ->data['image_file_id'];
+
+            /** @var \App\Models\File $file */
+            $file = File::findOrFail($imageFileId);
+        }
 
         // Return the file, or placeholder if the file is null.
         return optional($file)->resizedVersion($request->max_dimension) ?? OrganisationEvent::placeholderImage($request->max_dimension);

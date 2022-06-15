@@ -35,6 +35,7 @@ class Location extends Model implements AppliesUpdateRequests
         'lon' => 'float',
         'has_wheelchair_access' => 'boolean',
         'has_induction_loop' => 'boolean',
+        'has_accessible_toilet' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -97,6 +98,7 @@ class Location extends Model implements AppliesUpdateRequests
             'accessibility_info' => Arr::get($data, 'accessibility_info', $this->accessibility_info),
             'has_wheelchair_access' => Arr::get($data, 'has_wheelchair_access', $this->has_wheelchair_access),
             'has_induction_loop' => Arr::get($data, 'has_induction_loop', $this->has_induction_loop),
+            'has_accessible_toilet' => Arr::get($data, 'has_accessible_toilet', $this->has_accessible_toilet),
             'image_file_id' => Arr::get($data, 'image_file_id', $this->image_file_id),
         ]);
 

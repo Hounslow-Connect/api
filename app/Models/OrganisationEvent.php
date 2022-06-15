@@ -170,7 +170,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
             ->setUserResolver(function () use ($updateRequest) {
                 return $updateRequest->user;
             })
-            ->merge(['organisationEvent' => $this])
+            ->merge(['organisation_event' => $this])
             ->merge($updateRequest->data)
             ->rules();
 
