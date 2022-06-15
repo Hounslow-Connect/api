@@ -2,6 +2,7 @@
 
 namespace App\Models\Mutators;
 
+use Carbon\Carbon;
 use DateTime;
 
 trait OrganisationEventMutators
@@ -13,7 +14,7 @@ trait OrganisationEventMutators
      */
     public function getStartDateTimeAttribute()
     {
-        $start = $this->start_date->copy();
+        $start = new Carbon($this->start_date);
         list($startHour, $startMinute, $startSecond) = explode(':', $this->start_time);
         $start->hour($startHour)->minute($startMinute)->second($startSecond);
 
@@ -27,7 +28,7 @@ trait OrganisationEventMutators
      */
     public function getEndDateTimeAttribute()
     {
-        $end = $this->end_date->copy();
+        $end = new Carbon($this->end_date);
         list($endHour, $endMinute, $endSecond) = explode(':', $this->end_time);
         $end->hour($endHour)->minute($endMinute)->second($endSecond);
 
@@ -46,11 +47,7 @@ trait OrganisationEventMutators
             urlencode($this->startDateTime->format('Ymd\\THis\\Z')),
             urlencode($this->endDateTime->format('Ymd\\THis\\Z')),
             urlencode($this->title),
-            $this->is_virtual ? '' : urlencode(implode(',', [
-                $this->location->address_line_1,
-                $this->location->city,
-                $this->location->postcode,
-            ])),
+            $this->is_virtual ? '' : urlencode($this->location->toAddress()->__toString()),
             urlencode($this->intro)
         );
     }
@@ -67,11 +64,7 @@ trait OrganisationEventMutators
             urlencode($this->startDateTime->format(DateTime::ATOM)),
             urlencode($this->endDateTime->format(DateTime::ATOM)),
             urlencode($this->title),
-            $this->is_virtual ? '' : urlencode(implode(',', [
-                $this->location->address_line_1,
-                $this->location->city,
-                $this->location->postcode,
-            ])),
+            $this->is_virtual ? '' : urlencode($this->location->toAddress()->__toString()),
             urlencode($this->intro)
         );
     }

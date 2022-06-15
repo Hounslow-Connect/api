@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Core\V1\OrganisationEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrganisationEvent\Calendar\ShowRequest;
 use App\Models\OrganisationEvent;
+use Carbon\Carbon;
 use DateTime;
 
 class CalendarController extends Controller
@@ -20,12 +21,12 @@ class CalendarController extends Controller
     public function __invoke(ShowRequest $request, OrganisationEvent $organisationEvent)
     {
         $now = new DateTime();
-        $start = $organisationEvent->start_date->copy();
+        $start = new Carbon($organisationEvent->start_date);
         list($startHour, $startMinute, $startSecond) = explode(':', $organisationEvent->start_time);
-        $start->hour($startHour)->minute($startMinute)->second($startSecond);
-        $end = $organisationEvent->end_date->copy();
+        $start->setTime($startHour, $startMinute, $startSecond);
+        $end = new Carbon($organisationEvent->end_date);
         list($endHour, $endMinute, $endSecond) = explode(':', $organisationEvent->end_time);
-        $end->hour($endHour)->minute($endMinute)->second($endSecond);
+        $end->setTime($endHour, $endMinute, $endSecond);
 
         $vEvent = [
             'VERSION' => '2.0',
@@ -37,13 +38,15 @@ class CalendarController extends Controller
             'DTSTART' => $start->format('Ymd\\THis\\Z'),
             'DTEND' => $end->format('Ymd\\THis\\Z'),
             'SUMMARY' => $organisationEvent->title,
-            'DESCRIPTION' => $organisationEvent->description,
+            'DESCRIPTION' => $organisationEvent->intro,
             'GEO' => null,
+            'LOCATION' => null,
             'END' => 'VEVENT',
         ];
 
         if (!$organisationEvent->is_virtual) {
             $vEvent['GEO'] = $organisationEvent->location->lat . ';' . $organisationEvent->location->lon;
+            $vEvent['LOCATION'] = str_ireplace(',', '\,', $organisationEvent->location->toAddress()->__toString());
         }
 
         if ($organisationEvent->organiser_name) {

@@ -71,4 +71,26 @@ class Address
     {
         return new static($address, $city, $county, $postcode, $country);
     }
+
+    /**
+     * Return the address data as a string.
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return implode(', ', array_map(function ($value) {
+            return is_array($value) ? $value[0] : $value;
+        }, array_filter([
+            $this->addressLine1,
+            $this->addressLine2,
+            $this->addressLine3,
+            $this->city,
+            $this->county,
+            $this->postcode,
+            $this->country,
+        ], function ($value) {
+            return (bool)$value;
+        })));
+    }
 }

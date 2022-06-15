@@ -13,6 +13,7 @@ use App\Models\Service;
 use App\Models\Taxonomy;
 use App\Models\UpdateRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use DateTime;
 use Illuminate\Http\Response;
@@ -1389,19 +1390,15 @@ class OrganisationEventsTest extends TestCase
         $organisationEvent = factory(OrganisationEvent::class)->states('notVirtual', 'withOrganiser')->create();
 
         $now = new DateTime();
-        $start = $organisationEvent->start_date->copy();
+        $start = new Carbon($organisationEvent->start_date);
         list($startHour, $startMinute, $startSecond) = explode(':', $organisationEvent->start_time);
-        $start->hour($startHour)->minute($startMinute)->second($startSecond);
-        $end = $organisationEvent->end_date->copy();
+        $start->setTime($startHour, $startMinute, $startSecond);
+        $end = new Carbon($organisationEvent->end_date);
         list($endHour, $endMinute, $endSecond) = explode(':', $organisationEvent->end_time);
-        $end->hour($endHour)->minute($endMinute)->second($endSecond);
+        $end->setTime($endHour, $endMinute, $endSecond);
         $urlsafeTitle = urlencode($organisationEvent->title);
         $urlsafeIntro = urlencode($organisationEvent->intro);
-        $urlsafeLocation = urlencode(implode(',', [
-            $organisationEvent->location->address_line_1,
-            $organisationEvent->location->city,
-            $organisationEvent->location->postcode,
-        ]));
+        $urlsafeLocation = urlencode($organisationEvent->location->toAddress()->__toString());
 
         $iCalendar = implode("\r\n", [
             'BEGIN:VCALENDAR',
@@ -1414,8 +1411,9 @@ class OrganisationEventsTest extends TestCase
             'DTSTART:' . $start->format('Ymd\\THis\\Z'),
             'DTEND:' . $end->format('Ymd\\THis\\Z'),
             'SUMMARY:' . $organisationEvent->title,
-            'DESCRIPTION:' . $organisationEvent->description,
+            'DESCRIPTION:' . $organisationEvent->intro,
             'GEO:' . $organisationEvent->location->lat . ';' . $organisationEvent->location->lon,
+            'LOCATION:' . str_ireplace(',', '\,', $organisationEvent->location->toAddress()->__toString()),
             'END:VEVENT',
             'END:VCALENDAR',
         ]);
