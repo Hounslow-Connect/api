@@ -27,43 +27,34 @@ class Request extends FormRequest
     {
         return [
             'query' => [
-                'required_without_all:category,is_free,is_virtual,has_wheelchair_access,has_induction_loop,starts_after,ends_before,location',
                 'string',
                 'min:3',
                 'max:255',
             ],
             'category' => [
-                'required_without_all:query,is_free,is_virtual,has_wheelchair_access,has_induction_loop,starts_after,ends_before,location',
                 'string',
                 'min:1',
                 'max:255',
             ],
             'is_free' => [
-                'required_without_all:query,category,is_virtual,has_wheelchair_access,has_induction_loop,starts_after,ends_before,location',
                 'boolean',
             ],
             'is_virtual' => [
-                'required_without_all:query,category,is_free,has_wheelchair_access,has_induction_loop,starts_after,ends_before,location',
                 'boolean',
             ],
             'has_wheelchair_access' => [
-                'required_without_all:query,category,is_free,is_virtual,has_induction_loop,starts_after,ends_before,location',
                 'boolean',
             ],
             'has_induction_loop' => [
-                'required_without_all:query,category,is_free,is_virtual,has_wheelchair_access,starts_after,ends_before,location',
                 'boolean',
             ],
             'starts_after' => [
-                'required_without_all:query,category,is_free,is_virtual,has_wheelchair_access,has_induction_loop,ends_before,location',
                 'date',
             ],
             'ends_before' => [
-                'required_without_all:query,category,is_free,is_virtual,has_wheelchair_access,has_induction_loop,starts_after,location',
                 'date',
             ],
             'location' => [
-                'required_without_all:query,category,is_free,is_virtual,has_wheelchair_access,has_induction_loop,starts_after,ends_before',
                 'required_if:order,distance',
                 'array',
             ],
