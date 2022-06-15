@@ -77,6 +77,11 @@ EOT
                         )
                     )
                     ->style(FilterParameter::STYLE_SIMPLE),
+                FilterParameter::create(null, 'has_permission')
+                    ->description('Does the organisation admin user have permission to view')
+                    ->schema(
+                        Schema::boolean()
+                    ),
                 IncludeParameter::create(null, ['organisation'])
             )
             ->responses(
