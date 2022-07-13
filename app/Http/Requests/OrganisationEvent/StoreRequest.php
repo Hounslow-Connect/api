@@ -8,6 +8,7 @@ use App\Models\Organisation;
 use App\Models\Role;
 use App\Models\Taxonomy;
 use App\Models\UserRole;
+use App\Rules\DateSanity;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\IsOrganisationAdmin;
@@ -47,10 +48,10 @@ class StoreRequest extends FormRequest
         return [
             'organisation_id' => ['required', 'exists:organisations,id', new IsOrganisationAdmin($this->user('api'))],
             'title' => ['required', 'string', 'min:1', 'max:255'],
-            'start_date' => ['required', 'date_format:Y-m-d', 'after:today'],
-            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
-            'start_time' => ['required', 'date_format:H:i:s'],
-            'end_time' => ['required', 'date_format:H:i:s', 'after_or_equal:start_time'],
+            'start_date' => ['required', 'date_format:Y-m-d', 'after:today', new DateSanity($this)],
+            'end_date' => ['required', 'date_format:Y-m-d', new DateSanity($this)],
+            'start_time' => ['required', 'date_format:H:i:s', new DateSanity($this)],
+            'end_time' => ['required', 'date_format:H:i:s', new DateSanity($this)],
             'intro' => ['required', 'string', 'min:1', 'max:300'],
             'description' => [
                 'required',
