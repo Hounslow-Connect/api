@@ -27,11 +27,12 @@ class StoreEventSearchSchema extends Schema
                 Schema::boolean('is_virtual'),
                 Schema::boolean('has_wheelchair_access'),
                 Schema::boolean('has_induction_loop'),
+                Schema::boolean('has_accessible_toilet'),
                 Schema::string('starts_after'),
                 Schema::string('ends_before'),
                 Schema::string('order')
                     ->enum(Search::ORDER_RELEVANCE, Search::ORDER_DISTANCE, Search::ORDER_START, Search::ORDER_END)
-                    ->default('relevance'),
+                    ->default(Search::ORDER_START),
                 Schema::object('location')
                     ->required('lat', 'lon')
                     ->properties(
