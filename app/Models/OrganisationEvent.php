@@ -114,6 +114,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
                     'location' => ['type' => 'geo_point'],
                     'has_wheelchair_access' => ['type' => 'boolean'],
                     'has_induction_loop' => ['type' => 'boolean'],
+                    'has_accessible_toilet' => ['type' => 'boolean'],
                 ],
             ],
         ],
@@ -152,6 +153,7 @@ class OrganisationEvent extends Model implements AppliesUpdateRequests, HasTaxon
                 ],
                 'has_wheelchair_access' => $this->location->has_wheelchair_access,
                 'has_induction_loop' => $this->location->has_induction_loop,
+                'has_accessible_toilet' => $this->location->has_accessible_toilet,
             ];
         }
 

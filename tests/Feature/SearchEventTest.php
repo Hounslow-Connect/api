@@ -650,6 +650,32 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
+    public function searchEventsFilterByHasAccessibleToiletAsGuest()
+    {
+        $locatedEvent = factory(OrganisationEvent::class)->states('notVirtual')->create();
+        $virtualEvent = factory(OrganisationEvent::class)->create();
+        $locatedEventAccessibleToilet = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+            'location_id' => function () {
+                return factory(Location::class)->create([
+                    'has_accessible_toilet' => true,
+                ])->id;
+            },
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'has_accessible_toilet' => true,
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $locatedEventAccessibleToilet->id]);
+        $response->assertJsonMissing(['id' => $virtualEvent->id]);
+        $response->assertJsonMissing(['id' => $locatedEvent->id]);
+    }
+
+    /**
+     * @test
+     */
     public function searchEventsOnlyFutureDatesReturnedAsGuest()
     {
         $futureEvent = factory(OrganisationEvent::class)->create([

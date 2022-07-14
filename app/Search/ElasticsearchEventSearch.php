@@ -222,6 +222,26 @@ class ElasticsearchEventSearch implements EventSearch
     }
 
     /**
+     * @param bool $hasAccessibleToilet
+     * @return \App\Contracts\EventSearch
+     */
+    public function applyHasAccessibleToilet(bool $hasAccessibleToilet): EventSearch
+    {
+        $this->query['query']['bool']['filter'][] = [
+            'nested' => [
+                'path' => 'event_location',
+                'query' => [
+                    'term' => [
+                        'event_location.has_accessible_toilet' => $hasAccessibleToilet,
+                    ],
+                ],
+            ],
+        ];
+
+        return $this;
+    }
+
+    /**
      * @param string $order
      * @param \App\Support\Coordinate|null $location
      * @return \App\Search\ElasticsearchEventSearch

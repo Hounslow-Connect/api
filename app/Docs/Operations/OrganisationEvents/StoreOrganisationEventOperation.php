@@ -2,15 +2,13 @@
 
 namespace App\Docs\Operations\OrganisationEvents;
 
-use App\Docs\Schemas\OrganisationEvent\OrganisationEventSchema;
+use App\Docs\Responses\UpdateRequestReceivedResponse;
 use App\Docs\Schemas\OrganisationEvent\StoreOrganisationEventSchema;
-use App\Docs\Schemas\ResourceSchema;
 use App\Docs\Tags\OrganisationEventsTag;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\BaseObject;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\MediaType;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\Operation;
 use GoldSpecDigital\ObjectOrientedOAS\Objects\RequestBody;
-use GoldSpecDigital\ObjectOrientedOAS\Objects\Response;
 
 class StoreOrganisationEventOperation extends Operation
 {
@@ -34,11 +32,7 @@ class StoreOrganisationEventOperation extends Operation
                     )
             )
             ->responses(
-                Response::created()->content(
-                    MediaType::json()->schema(
-                        ResourceSchema::create(null, OrganisationEventSchema::create())
-                    )
-                )
+                UpdateRequestReceivedResponse::create(null, StoreOrganisationEventSchema::create())
             );
     }
 }

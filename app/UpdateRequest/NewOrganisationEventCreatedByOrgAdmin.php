@@ -73,13 +73,9 @@ class NewOrganisationEventCreatedByOrgAdmin implements AppliesUpdateRequests
             // 'last_modified_at' => Carbon::now(),
         ]);
 
-        if ($updateRequest->filled('location_id')) {
-            $organisationEvent->load('location');
-        }
-
-        if ($updateRequest->filled('image_file_id')) {
+        if ($data->has('image_file_id') && !empty($data->get('image_file_id'))) {
             /** @var \App\Models\File $file */
-            $file = File::findOrFail($updateRequest->image_file_id)->assigned();
+            $file = File::findOrFail($data->get('image_file_id'))->assigned();
 
             // Create resized version for common dimensions.
             foreach (config('ck.cached_image_dimensions') as $maxDimension) {
@@ -87,9 +83,11 @@ class NewOrganisationEventCreatedByOrgAdmin implements AppliesUpdateRequests
             }
         }
 
-        // Create the category taxonomy records.
-        $taxonomies = Taxonomy::whereIn('id', $updateRequest->category_taxonomies)->get();
-        $organisationEvent->syncTaxonomyRelationships($taxonomies);
+        if ($data->has('category_taxonomies') && !empty($data->get('category_taxonomies'))) {
+            // Create the category taxonomy records.
+            $taxonomies = Taxonomy::whereIn('id', $data->get('category_taxonomies'))->get();
+            $organisationEvent->syncTaxonomyRelationships($taxonomies);
+        }
 
         // Ensure conditional fields are reset if needed.
         $organisationEvent->resetConditionalFields();
