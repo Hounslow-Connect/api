@@ -27,6 +27,7 @@ class StoreEventSearchSchema extends Schema
                 Schema::boolean('is_virtual'),
                 Schema::boolean('has_wheelchair_access'),
                 Schema::boolean('has_induction_loop'),
+                Schema::boolean('has_accessible_toilet'),
                 Schema::string('starts_after'),
                 Schema::string('ends_before'),
                 Schema::string('order')
