@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\Taxonomy;
 use App\Models\UserRole;
 use App\Rules\CanUpdateCategoryTaxonomyRelationships;
+use App\Rules\DateSanity;
 use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\MarkdownMaxLength;
@@ -46,10 +47,10 @@ class UpdateRequest extends FormRequest
     {
         return [
             'title' => ['string', 'min:1', 'max:255'],
-            'start_date' => ['date_format:Y-m-d', 'after:today'],
-            'end_date' => ['date_format:Y-m-d', 'after_or_equal:start_date'],
-            'start_time' => ['date_format:H:i:s'],
-            'end_time' => ['date_format:H:i:s', 'after_or_equal:start_time'],
+            'start_date' => ['date_format:Y-m-d', 'after:today', new DateSanity($this)],
+            'end_date' => ['date_format:Y-m-d', new DateSanity($this)],
+            'start_time' => ['date_format:H:i:s', new DateSanity($this)],
+            'end_time' => ['date_format:H:i:s', new DateSanity($this)],
             'intro' => ['string', 'min:1', 'max:300'],
             'description' => [
                 'string',

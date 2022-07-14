@@ -75,9 +75,9 @@ class NewServiceCreatedByOrgAdmin implements AppliesUpdateRequests
 
         $service = Service::create($insert);
 
-        if (array_key_exists('useful_infos', $data)) {
+        if ($data->has('useful_infos')) {
             $service->usefulInfos()->delete();
-            foreach ($data['useful_infos'] as $usefulInfo) {
+            foreach ($data->get('useful_infos') as $usefulInfo) {
                 $service->usefulInfos()->create([
                     'title' => $usefulInfo['title'],
                     'description' => sanitize_markdown($usefulInfo['description']),
@@ -87,9 +87,9 @@ class NewServiceCreatedByOrgAdmin implements AppliesUpdateRequests
         }
 
         // Update the offering records.
-        if (array_key_exists('offerings', $data)) {
+        if ($data->has('offerings')) {
             $service->offerings()->delete();
-            foreach ($data['offerings'] as $offering) {
+            foreach ($data->get('offerings') as $offering) {
                 $service->offerings()->create([
                     'offering' => $offering['offering'],
                     'order' => $offering['order'],
@@ -98,9 +98,9 @@ class NewServiceCreatedByOrgAdmin implements AppliesUpdateRequests
         }
 
         // Update the gallery item records.
-        if (array_key_exists('gallery_items', $updateRequest->data)) {
+        if ($data->has('gallery_items')) {
             $service->serviceGalleryItems()->delete();
-            foreach ($data['gallery_items'] as $galleryItem) {
+            foreach ($data->get('gallery_items') as $galleryItem) {
                 $service->serviceGalleryItems()->create([
                     'file_id' => $galleryItem['file_id'],
                 ]);
@@ -108,9 +108,9 @@ class NewServiceCreatedByOrgAdmin implements AppliesUpdateRequests
         }
 
         // Update the category taxonomy records.
-        if (array_key_exists('category_taxonomies', $data)) {
+        if ($data->has('category_taxonomies')) {
             $taxonomies = Taxonomy::whereIn('id', $data['category_taxonomies'])->get();
-            $service->syncServiceTaxonomies($taxonomies);
+            $service->syncTaxonomyRelationships($taxonomies);
         }
 
         // Ensure conditional fields are reset if needed.

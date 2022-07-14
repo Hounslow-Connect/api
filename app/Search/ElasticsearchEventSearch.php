@@ -9,6 +9,7 @@ use App\Models\OrganisationEvent;
 use App\Models\Page;
 use App\Models\SearchHistory;
 use App\Support\Coordinate;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -240,14 +241,12 @@ class ElasticsearchEventSearch implements EventSearch
             $this->query['sort'][] = [
                 'start_date' => [
                     'order' => 'asc',
-                    'format' => 'strict_date',
                 ],
             ];
         } elseif ($order === static::ORDER_END) {
             $this->query['sort'][] = [
                 'end_date' => [
                     'order' => 'asc',
-                    'format' => 'strict_date',
                 ],
             ];
         }
@@ -267,14 +266,14 @@ class ElasticsearchEventSearch implements EventSearch
         if ($startsAfter) {
             $this->query['query']['bool']['filter'][] = [
                 'range' => [
-                    'start_date' => ['gte' => $startsAfter],
+                    'start_date' => ['gte' => Carbon::parse($startsAfter)->toDateTimeLocalString()],
                 ],
             ];
         }
         if ($endsBefore) {
             $this->query['query']['bool']['filter'][] = [
                 'range' => [
-                    'end_date' => ['lte' => $endsBefore],
+                    'end_date' => ['lte' => Carbon::parse($endsBefore)->toDateTimeLocalString()],
                 ],
             ];
         }

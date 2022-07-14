@@ -295,6 +295,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Thisisatest',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -326,6 +327,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Thisisatest',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -357,6 +359,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Thisisatest',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -386,6 +389,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Thisisatest',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -434,6 +438,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Quick Brown Fox',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -450,6 +455,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
         // Fuzzy
         $response = $this->json('POST', '/core/v1/search/events', [
             'query' => 'Foxy Brown',
+            'order' => 'relevance',
             'page' => 1,
             'per_page' => 20,
         ]);
@@ -1052,6 +1058,45 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
     /**
      * @test
      */
+    public function searchEventsOrderByStartDate()
+    {
+        $event1 = factory(OrganisationEvent::class)->create([
+            'title' => 'Testing Dates',
+            'start_date' => $this->faker->dateTimeBetween('+1 day', '+2 days'),
+            'end_date' => $this->faker->dateTimeBetween('+2 days', '+3 days'),
+        ]);
+
+        $event2 = factory(OrganisationEvent::class)->create([
+            'title' => 'Testing Dates',
+            'start_date' => $this->faker->dateTimeBetween('+4 days', '+5 days'),
+            'end_date' => $this->faker->dateTimeBetween('+6 days', '+7 days'),
+        ]);
+
+        $event3 = factory(OrganisationEvent::class)->create([
+            'title' => 'Testing Dates',
+            'start_date' => $this->faker->dateTimeBetween('+8 days', '+9 days'),
+            'end_date' => $this->faker->dateTimeBetween('+10 days', '+11 days'),
+        ]);
+
+        $response = $this->json('POST', '/core/v1/search/events', [
+            'query' => 'Testing',
+        ]);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $event1->id]);
+        $response->assertJsonFragment(['id' => $event2->id]);
+        $response->assertJsonFragment(['id' => $event3->id]);
+
+        $data = $this->getResponseContent($response)['data'];
+        $this->assertEquals(3, count($data));
+        $this->assertEquals($event1->id, $data[0]['id']);
+        $this->assertEquals($event2->id, $data[1]['id']);
+        $this->assertEquals($event3->id, $data[2]['id']);
+    }
+
+    /**
+     * @test
+     */
     public function searchEventsMoreTaxonomiesInACategoryCollectionAreMoreRelevantAsGuest()
     {
         // Create 3 taxonomies
@@ -1110,6 +1155,7 @@ class SearchEventTest extends TestCase implements UsesElasticsearch
 
         // Assert that when searching by collection, the events with more taxonomies are ranked higher.
         $response = $this->json('POST', '/core/v1/search/events', [
+            'order' => 'relevance',
             'category' => $collection->name,
         ]);
 

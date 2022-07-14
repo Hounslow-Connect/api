@@ -64,7 +64,7 @@ class EventController extends Controller
         }
 
         // Apply order.
-        $search->applyOrder($request->order ?? 'relevance', $location ?? null);
+        $search->applyOrder($request->order ?? 'start_date', $location ?? null);
 
         // Perform the search.
         return $search->paginate($request->page, $request->per_page);
