@@ -144,6 +144,7 @@ class UpdateRequest extends FormRequest
             ],
             'is_virtual' => ['boolean'],
             'location_id' => [
+                'nullable',
                 Rule::requiredIf(function () {
                     return !empty($this->is_virtual) && $this->is_virtual == false;
                 }),

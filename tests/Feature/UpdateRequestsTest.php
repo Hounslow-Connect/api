@@ -7,6 +7,7 @@ use App\Models\Audit;
 use App\Models\Location;
 use App\Models\Offering;
 use App\Models\Organisation;
+use App\Models\OrganisationEvent;
 use App\Models\Role;
 use App\Models\Service;
 use App\Models\ServiceLocation;
@@ -1054,6 +1055,126 @@ class UpdateRequestsTest extends TestCase
             'organisation_id' => $organisation->id,
             'role_id' => Role::organisationAdmin()->id,
         ]);
+    }
+
+    public function test_global_admin_can_approve_one_for_organisation_event()
+    {
+        $now = Date::now();
+        Date::setTestNow($now);
+
+        $user = factory(User::class)->create()->makeGlobalAdmin();
+        Passport::actingAs($user);
+
+        $organisationEvent = factory(OrganisationEvent::class)->create();
+
+        $updateRequest = $organisationEvent->updateRequests()->create([
+            'user_id' => factory(User::class)->create()->id,
+            'data' => [
+                'title' => 'Test Title',
+                'start_date' => $organisationEvent->start_date->toDateString(),
+                'end_date' => $organisationEvent->end_date->toDateString(),
+                'start_time' => $organisationEvent->start_time,
+                'end_time' => $organisationEvent->end_time,
+                'intro' => $organisationEvent->intro,
+                'description' => $organisationEvent->description,
+                'is_free' => $organisationEvent->is_free,
+                'fees_text' => $organisationEvent->fees_text,
+                'fees_url' => $organisationEvent->fees_url,
+                'organiser_name' => $organisationEvent->organisation_name,
+                'organiser_phone' => $organisationEvent->organiser_phone,
+                'organiser_email' => $organisationEvent->organiser_email,
+                'organiser_url' => $organisationEvent->organiser_url,
+                'booking_title' => $organisationEvent->booking_title,
+                'booking_summary' => $organisationEvent->booking_summary,
+                'booking_url' => $organisationEvent->booking_url,
+                'booking_cta' => $organisationEvent->booking_cta,
+                'homepage' => $organisationEvent->homepage,
+                'is_virtual' => $organisationEvent->is_virtual,
+                'location_id' => $organisationEvent->location_id,
+                'organisation_id' => $organisationEvent->organisation_id,
+                'category_taxonomies' => $organisationEvent->taxonomies()->pluck('taxonomies.id')->toArray(),
+            ],
+        ]);
+
+        $response = $this->json('PUT', "/core/v1/update-requests/{$updateRequest->id}/approve");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
+            'id' => $updateRequest->id,
+            'actioning_user_id' => $user->id,
+            'approved_at' => $now->toDateTimeString(),
+        ]);
+        $this->assertDatabaseHas((new OrganisationEvent())->getTable(), [
+            'id' => $organisationEvent->id,
+            'title' => 'Test Title',
+        ]);
+    }
+
+    public function test_global_admin_can_approve_one_for_new_organisation_event()
+    {
+        $now = Date::now();
+        Date::setTestNow($now);
+
+        $organisation = factory(Organisation::class)->create();
+        $location = factory(Location::class)->create();
+        $date = $this->faker->dateTimeBetween('tomorrow', '+6 weeks')->format('Y-m-d');
+        $user = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        //Given an organisation admin is logged in
+        Passport::actingAs($user);
+
+        $payload = [
+            'title' => $this->faker->sentence(3),
+            'start_date' => $date,
+            'end_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '13:00:00',
+            'intro' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'is_free' => false,
+            'fees_text' => $this->faker->sentence,
+            'fees_url' => $this->faker->url,
+            'organiser_name' => $this->faker->name,
+            'organiser_phone' => random_uk_phone(),
+            'organiser_email' => $this->faker->safeEmail,
+            'organiser_url' => $this->faker->url,
+            'booking_title' => $this->faker->sentence(3),
+            'booking_summary' => $this->faker->sentence,
+            'booking_url' => $this->faker->url,
+            'booking_cta' => $this->faker->words(2, true),
+            'homepage' => false,
+            'is_virtual' => false,
+            'location_id' => $location->id,
+            'organisation_id' => $organisation->id,
+            'category_taxonomies' => [],
+        ];
+
+        //When they create an organisation event
+        $response = $this->json('POST', '/core/v1/organisation-events', $payload);
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment($payload);
+
+        //Then an update request should be created for the new service
+        $updateRequest = UpdateRequest::query()
+            ->where('updateable_type', UpdateRequest::NEW_TYPE_ORGANISATION_EVENT)
+            ->where('updateable_id', null)
+            ->firstOrFail();
+
+        $globalAdminUser = factory(User::class)->create()->makeGlobalAdmin();
+        Passport::actingAs($globalAdminUser);
+
+        $response = $this->json('PUT', "/core/v1/update-requests/{$updateRequest->id}/approve");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
+            'id' => $updateRequest->id,
+            'actioning_user_id' => $globalAdminUser->id,
+            'approved_at' => $now,
+        ]);
+
+        $this->assertNotEmpty(OrganisationEvent::all());
+        $this->assertEquals(1, OrganisationEvent::all()->count());
     }
 
     public function test_audit_created_when_approved()
