@@ -208,6 +208,50 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
+    public function getAllOrganisationEventsDateOrderDescendingAsGuest200()
+    {
+        $date1 = $this->faker->dateTimeBetween('+2 weeks', '+3 weeks')->format('Y-m-d');
+        $date2 = $this->faker->dateTimeBetween('+1 week', '+2 weeks')->format('Y-m-d');
+        $date3 = $this->faker->dateTimeBetween('today', '+1 week')->format('Y-m-d');
+        $endtime = $this->faker->time('H:i:s', '+1 hour');
+        $starttime = $this->faker->time('H:i:s', 'now');
+
+        $organisationEvent1 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date1,
+            'end_date' => $date1,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent2 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date2,
+            'end_date' => $date2,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+        $organisationEvent3 = factory(OrganisationEvent::class)->create([
+            'start_date' => $date3,
+            'end_date' => $date3,
+            'start_time' => $starttime,
+            'end_time' => $endtime,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $response->assertJsonFragment(['id' => $organisationEvent1->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent2->id]);
+        $response->assertJsonFragment(['id' => $organisationEvent3->id]);
+
+        $results = $response->json('data');
+
+        $this->assertEquals($organisationEvent3->id, $results[0]['id']);
+        $this->assertEquals($organisationEvent2->id, $results[1]['id']);
+        $this->assertEquals($organisationEvent1->id, $results[2]['id']);
+    }
+
+    /**
+     * @test
+     */
     public function getAllOrganisationEventsFilterByDatesAsGuest200()
     {
         $date1 = $this->faker->dateTimeBetween('+2 days', '+1 weeks');

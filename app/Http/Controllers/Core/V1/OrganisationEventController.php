@@ -63,10 +63,12 @@ class OrganisationEventController extends Controller
             ->allowedIncludes(['organisation'])
             ->allowedSorts([
                 'start_date',
+                '-start_date',
                 'end_date',
+                '-end_date',
                 'title',
             ])
-            ->defaultSort('-start_date')
+            ->defaultSort('start_date')
             ->paginate(per_page($request->per_page));
 
         event(EndpointHit::onRead($request, 'Viewed all organisation events'));
