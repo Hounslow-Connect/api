@@ -16,6 +16,7 @@ use App\Rules\MarkdownMaxLength;
 use App\Rules\MarkdownMinLength;
 use App\Rules\RootTaxonomyIs;
 use App\Rules\Slug;
+use App\Rules\UkPhoneNumber;
 use App\Rules\UserHasRole;
 use App\Rules\VideoEmbed;
 use Illuminate\Foundation\Http\FormRequest;
@@ -95,7 +96,14 @@ class StoreRequest extends FormRequest
             'video_embed' => ['present', 'nullable', 'url', 'max:255', new VideoEmbed()],
             'url' => ['required', 'url', 'max:255'],
             'contact_name' => ['present', 'nullable', 'string', 'min:1', 'max:255'],
-            'contact_phone' => ['present', 'nullable', 'string', 'min:1', 'max:255'],
+            'contact_phone' => [
+                'present',
+                'nullable',
+                'string',
+                'min:1',
+                'max:255',
+                new UkPhoneNumber('Service Contact Phone - Please enter a valid UK telephone number.'),
+            ],
             'contact_email' => ['present', 'nullable', 'email', 'max:255'],
             'show_referral_disclaimer' => [
                 'required',

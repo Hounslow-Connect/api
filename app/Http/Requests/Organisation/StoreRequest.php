@@ -10,6 +10,7 @@ use App\Rules\FileIsMimeType;
 use App\Rules\FileIsPendingAssignment;
 use App\Rules\RootTaxonomyIs;
 use App\Rules\Slug;
+use App\Rules\UkPhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -55,6 +56,7 @@ class StoreRequest extends FormRequest
                 'string',
                 'min:1',
                 'max:255',
+                new UkPhoneNumber('Organisation Phone - Please enter a valid UK telephone number.'),
             ],
             'logo_file_id' => [
                 'nullable',
