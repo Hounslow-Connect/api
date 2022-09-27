@@ -390,8 +390,10 @@ class ServicesTest extends TestCase
         Passport::actingAs($globalAdminUser);
 
         $updateRequestCheckResponse = $this->get(
-            route('core.v1.update-requests.show',
-                ['update_request' => $updateRequestId])
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
         );
 
         $updateRequestCheckResponse->assertSuccessful();
@@ -536,8 +538,10 @@ class ServicesTest extends TestCase
         Passport::actingAs(factory(User::class)->create()->makeGlobalAdmin());
 
         $updateRequestCheckResponse = $this->get(
-            route('core.v1.update-requests.show',
-                ['update_request' => $updateRequestId])
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
         );
 
         $updateRequestCheckResponse->assertSuccessful();
@@ -2530,8 +2534,10 @@ class ServicesTest extends TestCase
         Passport::actingAs($user);
 
         $updateRequestCheckResponse = $this->get(
-            route('core.v1.update-requests.show',
-                ['update_request' => $updateRequestId])
+            route(
+                'core.v1.update-requests.show',
+                ['update_request' => $updateRequestId]
+            )
         );
 
         $updateRequestCheckResponse->assertSuccessful();
@@ -3631,6 +3637,64 @@ class ServicesTest extends TestCase
                             'errors' => [
                                 'id' => [
                                     'The ID is used elsewhere in the spreadsheet.',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function validate_file_import_invalid_organisation_ids()
+    {
+        Storage::fake('local');
+
+        $user = factory(User::class)->create();
+        $user->makeSuperAdmin();
+        Passport::actingAs($user);
+
+        $uuid = uuid();
+
+        $services = collect([
+            factory(Service::class)->make([
+                'organisation_id' => 'foo',
+            ]),
+            factory(Service::class)->make([
+                'organisation_id' => $uuid,
+            ]),
+        ]);
+
+        $this->createServiceSpreadsheets($services);
+
+        $response = $this->json('POST', "/core/v1/services/import", [
+            'spreadsheet' => 'data:application/vnd.ms-excel;base64,' . base64_encode(file_get_contents(Storage::disk('local')->path('test.xls'))),
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response->assertJson([
+            'data' => [
+                'errors' => [
+                    'spreadsheet' => [
+                        [
+                            'row' => [],
+                            'errors' => [
+                                'organisation_id' => [
+                                    "validation.uuid",
+                            "The organisation id field must contain an ID for an organisation you are an organisation admin for."
+                                ],
+                            ],
+                        ],
+                        [
+                            'row' => [],
+                            'errors' => [
+                                'organisation_id' => [
+                                    "The selected organisation id is invalid.",
+                            "The organisation id field must contain an ID for an organisation you are an organisation admin for."
                                 ],
                             ],
                         ],
@@ -4892,7 +4956,6 @@ class ServicesTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['social_medias' => ['This field is no longer accepted for services and should be set in the Organisation.']]);
-
     }
 
     public function test_service_update_request_approval_rejected_if_social_medias_field_is_populated()
@@ -4946,6 +5009,5 @@ class ServicesTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['social_medias' => ['This field is no longer accepted for services and should be set in the Organisation.']]);
-
     }
 }
