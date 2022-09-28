@@ -186,6 +186,81 @@ class OrganisationSignUpFormTest extends TestCase
     /**
      * @test
      */
+    public function guest_cannot_sign_up_with_existing_email()
+    {
+        $this->fakeEvents();
+
+        $organisation = factory(Organisation::class)->create();
+
+        factory(User::class)->create([
+            'email' => 'admin@organisation.org'
+        ])->makeOrganisationAdmin($organisation);
+
+        $userSubmission = [
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'email' => 'admin@organisation.org',
+            'phone' => random_uk_phone(),
+            'password' => 'P@55w0rd.',
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-sign-up-forms', [
+            'user' => $userSubmission,
+            'organisation' => [
+                'id' => $organisation->id,
+            ],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @test
+     */
+    public function guest_cannot_sign_up_with_email_in_existing_signup_request()
+    {
+        $this->fakeEvents();
+
+        $organisation = factory(Organisation::class)->create();
+
+        $user1Submission = [
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'email' => 'admin@organisation.org',
+            'phone' => random_uk_phone(),
+            'password' => 'P@55w0rd.',
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-sign-up-forms', [
+            'user' => $user1Submission,
+            'organisation' => [
+                'id' => $organisation->id,
+            ],
+        ]);
+
+        $response->assertStatus(Response::HTTP_CREATED);
+
+        $user2Submission = [
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'email' => 'admin@organisation.org',
+            'phone' => random_uk_phone(),
+            'password' => 'P@55w0rd.',
+        ];
+
+        $response = $this->json('POST', '/core/v1/organisation-sign-up-forms', [
+            'user' => $user2Submission,
+            'organisation' => [
+                'id' => $organisation->id,
+            ],
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @test
+     */
     public function guest_cannot_sign_up_to_non_existing_organisation()
     {
         $userSubmission = [
@@ -277,7 +352,6 @@ class OrganisationSignUpFormTest extends TestCase
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
-
     }
 
     public function test_service_worker_cannot_create_one()
