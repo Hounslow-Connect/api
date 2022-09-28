@@ -207,7 +207,7 @@ class StoreRequest extends FormRequest
             'user.password.min' => '2. User account - Please create a password that is at least eight characters long.',
 
             'organisation.slug.required' => '3. Organisation - Please enter the organisation slug.',
-            'organisation.slug.unique' => '3. Organisation - The organisation is already listed. Please contact us for help logging in onehounslowconnect@hounslow.gov.uk.',
+            'organisation.slug.unique' => '3. Organisation - The organisation is already listed. Please contact us for help logging in hounslowconnect@hounslow.gov.uk.',
             'organisation.name.required' => '3. Organisation - Please enter the organisation name.',
             'organisation.description.required' => '3. Organisation - Please enter a one-line summary of the organisation.',
             'organisation.url.required' => '3. Organisation - Please enter a valid web address in the correct format (starting with https:// or http://).',
