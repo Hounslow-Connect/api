@@ -29,6 +29,13 @@ class OrganisationSignUpForm implements AppliesUpdateRequests
         // Update rules for hashed password instead of raw.
         $rules['user.password'] = ['required', 'string'];
 
+        // Update rules for email. Don't check for exists in users or update requests
+        $rules['user.email'] = [
+            'required',
+            'email',
+            'max:255',
+        ];
+
         return ValidatorFacade::make($updateRequest->data, $rules);
     }
 

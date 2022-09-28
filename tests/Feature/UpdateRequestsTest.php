@@ -1058,53 +1058,6 @@ class UpdateRequestsTest extends TestCase
         ]);
     }
 
-    public function test_error_returned_for_organisation_sign_up_form_with_existing_user()
-    {
-        $now = Date::now();
-        Date::setTestNow($now);
-
-        $user = factory(User::class)->create()->makeGlobalAdmin();
-        Passport::actingAs($user);
-
-        $organisation = factory(Organisation::class)->create();
-
-        factory(User::class)->create([
-            'email' => 'admin@organisation.org'
-        ])->makeOrganisationAdmin($organisation);
-
-        /** @var \App\Models\UpdateRequest $updateRequest */
-        $updateRequest = UpdateRequest::create([
-            'updateable_type' => UpdateRequest::NEW_TYPE_ORGANISATION_SIGN_UP_FORM,
-            'data' => [
-                'user' => [
-                    'first_name' => 'John',
-                    'last_name' => 'Doe',
-                    'email' => 'admin@organisation.org',
-                    'phone' => '07700000000',
-                    'password' => 'P@55w0rd.',
-                ],
-                'organisation' => [
-                    'id' => $organisation->id,
-                ],
-            ],
-        ]);
-
-        $response = $this->json('PUT', "/core/v1/update-requests/{$updateRequest->id}/approve");
-
-        $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
-
-        $this->assertDatabaseHas((new UpdateRequest())->getTable(), [
-            'id' => $updateRequest->id,
-            'approved_at' => null,
-        ]);
-        $this->assertDatabaseMissing((new User())->getTable(), [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'admin@organisation.org',
-            'phone' => '07700000000',
-        ]);
-    }
-
     public function test_audit_created_when_approved()
     {
         $this->fakeEvents();
