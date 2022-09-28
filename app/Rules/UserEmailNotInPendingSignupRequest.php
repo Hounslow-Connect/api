@@ -3,9 +3,7 @@
 namespace App\Rules;
 
 use App\Models\UpdateRequest;
-use App\Models\User;
 use Illuminate\Contracts\Validation\Rule;
-use Illuminate\Database\Eloquent\Builder;
 
 class UserEmailNotInPendingSignupRequest implements Rule
 {
@@ -39,9 +37,9 @@ class UserEmailNotInPendingSignupRequest implements Rule
         }
 
         return UpdateRequest::query()
-        ->where('updateable_type', UpdateRequest::NEW_TYPE_ORGANISATION_SIGN_UP_FORM)
-        ->where('data->user->email', $email)
-        ->doesntExist();
+            ->where('updateable_type', UpdateRequest::NEW_TYPE_ORGANISATION_SIGN_UP_FORM)
+            ->where('data->user->email', $email)
+            ->doesntExist();
     }
 
     /**

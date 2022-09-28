@@ -45,7 +45,7 @@ class StoreRequest extends FormRequest
                 'email',
                 'max:255',
                 new UserEmailNotTaken(null, 'User Email - The email entered is already in use. Please enter a different email address or log into your existing account.'),
-                new UserEmailNotInPendingSignupRequest('User Email - The email has already been submitted for approval. Please await the outcome of the approval process before registering with this email.')
+                new UserEmailNotInPendingSignupRequest('User Email - The email has already been submitted for approval. Please await the outcome of the approval process before registering with this email.'),
             ],
             'user.phone' => [
                 'required',
