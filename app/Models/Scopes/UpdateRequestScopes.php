@@ -120,6 +120,8 @@ trait UpdateRequestScopes
         $serviceLocations = UpdateRequest::EXISTING_TYPE_SERVICE_LOCATION;
         $organisations = UpdateRequest::EXISTING_TYPE_ORGANISATION;
         $organisationSignUpForm = UpdateRequest::NEW_TYPE_ORGANISATION_SIGN_UP_FORM;
+        $organisationEvents = UpdateRequest::EXISTING_TYPE_ORGANISATION_EVENT;
+        $newOrganisationEvent = UpdateRequest::NEW_TYPE_ORGANISATION_EVENT;
 
         return <<<EOT
 CASE `update_requests`.`updateable_type`
@@ -158,6 +160,15 @@ CASE `update_requests`.`updateable_type`
             WHERE `update_requests`.`data`->>"$.organisation.id" = `organisations`.`id`
             LIMIT 1
         ), `update_requests`.`data`->>"$.organisation.name")
+    )
+    WHEN "{$organisationEvents}" THEN (
+        SELECT `organisation_events`.`title`
+        FROM `organisation_events`
+        WHERE `update_requests`.`updateable_id` = `organisation_events`.`id`
+        LIMIT 1
+    )
+    WHEN "{$newOrganisationEvent}" THEN (
+        `update_requests`.`data`->>"$.title"
     )
 END
 EOT;
