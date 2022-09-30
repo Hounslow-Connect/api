@@ -97,61 +97,11 @@ class Report extends Model
             'Organisation/Service IDs',
         ];
 
-        $data = [$headings];
+        $data = $this->getUserExportResults()->map(function ($row) {
+            return array_values(get_object_vars($row));
+        })->all();
 
-        $callback = function (User $user) {
-            // Compile the highest roles for a service/organisation.
-            $highestRole = $user->highestRole();
-
-            if (in_array($highestRole->name ?? null, [Role::NAME_SUPER_ADMIN, Role::NAME_GLOBAL_ADMIN])) {
-                // If the highest role is super admin or global admin.
-                $allPermissions = [];
-                $allIds = [];
-            } else {
-                // If the highest role is anything else.
-                $allPermissions = [];
-                $allIds = [];
-
-                // Append the organisation details.
-                $user->organisations
-                    ->each(function (Organisation $organisation) use (&$allPermissions, &$allIds) {
-                        $allPermissions[] = Role::NAME_ORGANISATION_ADMIN;
-                        $allIds[] = $organisation->id;
-                    });
-
-                // Append the service details.
-                $user->services
-                    ->reject(function (Service $service) use ($allIds) {
-                        return in_array($service->organisation_id, $allIds);
-                    })
-                    ->each(function (Service $service) use ($user, &$allPermissions, &$allIds) {
-                        $allPermissions[] = $user->hasRoleCached(Role::serviceAdmin(), $service)
-                        ? Role::NAME_SERVICE_ADMIN
-                        : Role::NAME_SERVICE_WORKER;
-                        $allIds[] = $service->id;
-                    });
-            }
-
-            // Append a row to the data array.
-            return [
-                $user->id,
-                $user->first_name,
-                $user->last_name,
-                $user->email,
-                $highestRole->name ?? null,
-                implode(',', $allPermissions),
-                implode(',', $allIds),
-            ];
-        };
-
-        User::query()
-            ->with('userRoles.role', 'organisations', 'services')
-            ->chunk(200, function (Collection $users) use (&$data, $callback) {
-                // Loop through each user in the chunk.
-                foreach ($this->reportRowGenerator($users, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

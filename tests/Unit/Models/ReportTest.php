@@ -27,7 +27,7 @@ class ReportTest extends TestCase
      * Users export.
      */
 
-    public function test_users_export_works()
+    public function test_users_export_works_with_super_admin()
     {
         // Create a single user.
         $user = factory(User::class)->create()->makeSuperAdmin();
@@ -142,6 +142,76 @@ class ReportTest extends TestCase
             Role::NAME_SERVICE_ADMIN,
             $service->id,
         ], $csv[1]);
+    }
+
+    public function test_users_export_works_with_organisation_and_service_admin()
+    {
+        // Create an organisation.
+        $organisation = factory(Organisation::class)->create();
+
+        // Create an organisation admin user.
+        $orgAdmin = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+
+        // Create a service.
+        $service = factory(Service::class)->create();
+
+        // Create a service admin user.
+        $serviceAdmin = factory(User::class)->create()->makeServiceAdmin($service);
+
+        // Create an organisation and service admin
+        $orgServiceAdmin = factory(User::class)->create()->makeOrganisationAdmin($organisation);
+        $orgServiceAdmin->makeServiceAdmin($service);
+
+        // Generate the report.
+        $report = Report::generate(ReportType::usersExport());
+
+        // Test that the data is correct.
+        $csv = csv_to_array($report->file->getContent());
+
+        // Assert correct number of records exported.
+        $this->assertEquals(4, count($csv));
+
+        // Assert headings are correct.
+        $this->assertEquals([
+            'User Reference ID',
+            'User First Name',
+            'User Last Name',
+            'Email address',
+            'Highest Permission Level',
+            'Organisation/Service Permission Levels',
+            'Organisation/Service IDs',
+        ], $csv[0]);
+
+        // Assert created user exported.
+        $this->assertContains([
+            $orgAdmin->id,
+            $orgAdmin->first_name,
+            $orgAdmin->last_name,
+            $orgAdmin->email,
+            Role::NAME_ORGANISATION_ADMIN,
+            Role::NAME_ORGANISATION_ADMIN,
+            $organisation->id,
+        ], $csv);
+
+        $this->assertContains([
+            $serviceAdmin->id,
+            $serviceAdmin->first_name,
+            $serviceAdmin->last_name,
+            $serviceAdmin->email,
+            Role::NAME_SERVICE_ADMIN,
+            Role::NAME_SERVICE_ADMIN,
+            $service->id,
+        ], $csv);
+
+        $this->assertContains([
+            $orgServiceAdmin->id,
+            $orgServiceAdmin->first_name,
+            $orgServiceAdmin->last_name,
+            $orgServiceAdmin->email,
+            Role::NAME_ORGANISATION_ADMIN,
+            implode(',', [Role::NAME_ORGANISATION_ADMIN, Role::NAME_SERVICE_ADMIN]),
+            implode(',', [$organisation->id, $service->id]),
+        ], $csv);
     }
 
     /*
