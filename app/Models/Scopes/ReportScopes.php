@@ -11,7 +11,6 @@ trait ReportScopes
     /**
      * User Export Report query
      *
-     * @param type name
      * @return \Illuminate\Support\Collection
      **/
     public function getUserExportResults()
@@ -57,6 +56,37 @@ EOT;
             $join->on('all_roles.id', '=', 'user_roles.role_id');
         })
         ->groupBy('users.id');
+
+        return $query->get();
+    }
+
+    /**
+     * Service Export Report query
+     *
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getServiceExportResults()
+    {
+        $query = DB::table('services')
+        ->select([
+            'organisations.name as organisation_name',
+            'organisations.id as organisation_id',
+            'organisations.email as organisation_email',
+            'organisations.phone as organisation_phone',
+            'services.id as service_id',
+            'services.name as service_name',
+            'services.url as service_url',
+            'services.contact_name as service_contact_name',
+            'services.updated_at as service_updated_at',
+            'services.referral_method as service_referral_method',
+            'services.referral_email as service_referral_email',
+            'services.status as service_status',
+        ])
+        ->selectRaw('group_concat(distinct trim(trailing ", " from replace(concat_ws(", ", locations.address_line_1, locations.address_line_2, locations.address_line_3, locations.city, locations.county, locations.postcode, locations.country), ", , ", ", ")) separator "|") as service_locations')
+        ->join('organisations', 'services.organisation_id', '=', 'organisations.id')
+        ->leftJoin('service_locations', 'service_locations.service_id', '=', 'services.id')
+        ->leftJoin('locations', 'service_locations.location_id', '=', 'locations.id')
+        ->groupBy('services.id');
 
         return $query->get();
     }

@@ -98,7 +98,15 @@ class Report extends Model
         ];
 
         $data = $this->getUserExportResults()->map(function ($row) {
-            return array_values(get_object_vars($row));
+            return [
+                $row->id,
+                $row->first_name,
+                $row->last_name,
+                $row->email,
+                $row->max_role,
+                $row->all_permissions,
+                $row->org_service_ids
+            ];
         })->all();
 
         array_unshift($data, $headings);
@@ -130,36 +138,25 @@ class Report extends Model
             'Locations Delivered At',
         ];
 
-        $data = [$headings];
-
-        $callback = function (Service $service) {
+        $data = $this->getServiceExportResults()->map(function ($row) {
             return [
-                $service->organisation->name,
-                $service->organisation->id,
-                $service->organisation->email,
-                $service->organisation->phone,
-                $service->id,
-                $service->name,
-                $service->url,
-                $service->contact_name,
-                $service->updated_at->format(CarbonImmutable::ISO8601),
-                $service->referral_method,
-                $service->referral_email,
-                $service->status,
-                $service->serviceLocations->map(function (ServiceLocation $serviceLocation) {
-                    return $serviceLocation->location->full_address;
-                })->implode('|'),
+                $row->organisation_name,
+                $row->organisation_id,
+                $row->organisation_email,
+                $row->organisation_phone,
+                $row->service_id,
+                $row->service_name,
+                $row->service_url,
+                $row->service_contact_name,
+                (new CarbonImmutable($row->service_updated_at))->format(CarbonImmutable::ISO8601),
+                $row->service_referral_method,
+                $row->service_referral_email,
+                $row->service_status,
+                $row->service_locations
             ];
-        };
+        })->all();
 
-        Service::query()
-            ->with('organisation', 'serviceLocations.location')
-            ->chunk(200, function (Collection $services) use (&$data, $callback) {
-                // Loop through each service in the chunk.
-                foreach ($this->reportRowGenerator($services, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));
