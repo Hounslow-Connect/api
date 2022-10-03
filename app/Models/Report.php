@@ -217,14 +217,14 @@ class Report extends Model
 
         $data = $this->getLocationExportResults()->map(function ($row) {
             return [
-                $row->location_address_line_1,
-                $row->location_address_line_2,
-                $row->location_address_line_3,
-                $row->location_city,
-                $row->location_county,
-                $row->location_postcode,
-                $row->location_country,
-                $row->location_services_count,
+                $row->address_line_1,
+                $row->address_line_2,
+                $row->address_line_3,
+                $row->city,
+                $row->county,
+                $row->postcode,
+                $row->country,
+                $row->services_count,
             ];
         })->all();
 
@@ -265,36 +265,21 @@ class Report extends Model
             'Date Consent Provided',
         ];
 
-        $data = [$headings];
-
-        $callback = function (Referral $referral) {
+        $data = $this->getReferralExportResults($startsAt, $endsAt)->map(function ($row) {
             return [
-                $referral->service->organisation->id,
-                $referral->service->organisation->name,
-                $referral->service->id,
-                $referral->service->name,
-                optional($referral->created_at)->format(CarbonImmutable::ISO8601),
-                $referral->isCompleted()
-                ? $referral->latestCompletedStatusUpdate->created_at->format(CarbonImmutable::ISO8601)
-                : '',
-                $referral->isSelfReferral() ? 'Self' : 'Champion',
-                $referral->isSelfReferral() ? null : $referral->organisationName(),
-                optional($referral->referral_consented_at)->format(CarbonImmutable::ISO8601),
+                $row->organisation_id,
+                $row->organisation_name,
+                $row->service_id,
+                $row->service_name,
+                (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601),
+                $row->status === Referral::STATUS_COMPLETED? (new CarbonImmutable($row->last_update))->format(CarbonImmutable::ISO8601) : '',
+                $row->referee_name === null? 'Self' : 'Champion',
+                $row->organisation?? $row->taxonomy_name,
+                $row->consented_at? (new CarbonImmutable($row->consented_at))->format(CarbonImmutable::ISO8601) : null
             ];
-        };
+        })->all();
 
-        Referral::query()
-            ->with('service.organisation', 'latestCompletedStatusUpdate', 'organisationTaxonomy')
-            ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
-                // When date range provided, filter referrals which were created between the date range.
-                $query->whereBetween(table(Referral::class, 'created_at'), [$startsAt, $endsAt]);
-            })
-            ->chunk(200, function (Collection $referrals) use (&$data, $callback) {
-                // Loop through each referral in the chunk.
-                foreach ($this->reportRowGenerator($referrals, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

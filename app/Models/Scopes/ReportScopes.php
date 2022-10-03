@@ -4,6 +4,8 @@ namespace App\Models\Scopes;
 
 use App\Models\Role;
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use App\Models\StatusUpdate;
 use Illuminate\Support\Facades\DB;
 
 trait ReportScopes
@@ -146,17 +148,58 @@ EOT;
 
         $query = DB::table('locations')
         ->select([
-            'locations.address_line_1 as location_address_line_1',
-            'locations.address_line_2 as location_address_line_2',
-            'locations.address_line_3 as location_address_line_3',
-            'locations.city as location_city',
-            'locations.county as location_county',
-            'locations.postcode as location_postcode',
-            'locations.country as location_country'
+            'locations.address_line_1 as address_line_1',
+            'locations.address_line_2 as address_line_2',
+            'locations.address_line_3 as address_line_3',
+            'locations.city as city',
+            'locations.county as county',
+            'locations.postcode as postcode',
+            'locations.country as country'
         ])
-        ->selectRaw('ifnull(service_counts.count, 0) as location_services_count')
+        ->selectRaw('ifnull(service_counts.count, 0) as services_count')
         ->leftJoinSub($serviceCountQuery, 'service_counts', function ($join) {
             $join->on('service_counts.location_id', '=', 'locations.id');
+        });
+
+        return $query->get();
+    }
+
+    /**
+     * Referral Export Report query
+     *
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getReferralExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null)
+    {
+        $statusUpdateQuery = DB::table('status_updates')
+        ->selectRaw('referral_id, max(created_at) as last_update')
+        ->where('to', StatusUpdate::TO_COMPLETED)
+        ->groupBy('referral_id');
+
+        $query = DB::table('referrals')
+        ->select([
+            'organisations.id as organisation_id',
+            'organisations.name as organisation_name',
+            'services.id as service_id',
+            'services.name as service_name',
+            'referrals.created_at as created_at',
+            'status_updates.last_update as last_update',
+            'referrals.status as status',
+            'referrals.referee_name as referee_name',
+            'referrals.organisation as organisation',
+            'taxonomies.name as taxonomy_name',
+            'referrals.referral_consented_at as consented_at'
+        ])
+        ->join('services', 'services.id', '=', 'referrals.service_id')
+        ->join('organisations', 'organisations.id', '=', 'services.organisation_id')
+        ->leftJoin('organisation_taxonomies', 'organisation_taxonomies.id', '=', 'referrals.organisation_taxonomy_id')
+        ->leftJoin('taxonomies', 'taxonomies.id', '=', 'organisation_taxonomies.taxonomy_id')
+        ->leftJoinSub($statusUpdateQuery, 'status_updates', function ($join) {
+            $join->on('status_updates.referral_id', '=', 'referrals.id');
+        })
+        ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
+            // When date range provided, filter referrals which were created between the date range.
+            $query->whereBetween('referrals.created_at', [$startsAt, $endsAt]);
         });
 
         return $query->get();
