@@ -282,6 +282,16 @@ class ReportTest extends TestCase
         factory(User::class)->create()->makeSuperAdmin();
         factory(User::class)->create()->makeOrganisationAdmin($organisation);
 
+        $headings = [
+            'Organisation Reference ID',
+            'Organisation Name',
+            'Number of Services',
+            'Organisation Email',
+            'Organisation Phone',
+            'Organisation URL',
+            'Number of Accounts Attributed',
+        ];
+
         // Generate the report.
         $report = Report::generate(ReportType::organisationsExport());
 
@@ -292,21 +302,41 @@ class ReportTest extends TestCase
         $this->assertEquals(2, count($csv));
 
         // Assert headings are correct.
-        $this->assertEquals([
-            'Organisation Reference ID',
-            'Organisation Name',
-            'Number of Services',
-            'Organisation Email',
-            'Organisation Phone',
-            'Organisation URL',
-            'Number of Accounts Attributed',
-        ], $csv[0]);
+        $this->assertEquals($headings, $csv[0]);
 
         // Assert created organisation exported.
         $this->assertEquals([
             $organisation->id,
             $organisation->name,
             0,
+            $organisation->email,
+            $organisation->phone,
+            $organisation->url,
+            1,
+        ], $csv[1]);
+
+        // Create a service
+        $service = factory(Service::class)->create([
+            'organisation_id' => $organisation->id
+        ]);
+
+        // Generate the report.
+        $report = Report::generate(ReportType::organisationsExport());
+
+        // Test that the data is correct.
+        $csv = csv_to_array($report->file->getContent());
+
+        // Assert correct number of records exported.
+        $this->assertEquals(2, count($csv));
+
+        // Assert headings are correct.
+        $this->assertEquals($headings, $csv[0]);
+
+        // Assert created organisation exported.
+        $this->assertEquals([
+            $organisation->id,
+            $organisation->name,
+            1,
             $organisation->email,
             $organisation->phone,
             $organisation->url,
@@ -323,6 +353,17 @@ class ReportTest extends TestCase
         // Create a single location.
         $location = factory(Location::class)->create();
 
+        $headings = [
+            'Address Line 1',
+            'Address Line 2',
+            'Address Line 3',
+            'City',
+            'County',
+            'Postcode',
+            'Country',
+            'Number of Services Delivered at The Location',
+        ];
+
         // Generate the report.
         $report = Report::generate(ReportType::locationsExport());
 
@@ -333,16 +374,7 @@ class ReportTest extends TestCase
         $this->assertEquals(2, count($csv));
 
         // Assert headings are correct.
-        $this->assertEquals([
-            'Address Line 1',
-            'Address Line 2',
-            'Address Line 3',
-            'City',
-            'County',
-            'Postcode',
-            'Country',
-            'Number of Services Delivered at The Location',
-        ], $csv[0]);
+        $this->assertEquals($headings, $csv[0]);
 
         // Assert created location exported.
         $this->assertEquals([
@@ -354,6 +386,38 @@ class ReportTest extends TestCase
             $location->postcode,
             $location->country,
             0,
+        ], $csv[1]);
+
+        // Create a single service.
+        $service = factory(Service::class)->create();
+
+        factory(ServiceLocation::class)->create([
+            'service_id' => $service->id,
+            'location_id' => $location->id
+        ]);
+
+        // Generate the report.
+        $report = Report::generate(ReportType::locationsExport());
+
+        // Test that the data is correct.
+        $csv = csv_to_array($report->file->getContent());
+
+        // Assert correct number of records exported.
+        $this->assertEquals(2, count($csv));
+
+        // Assert headings are correct.
+        $this->assertEquals($headings, $csv[0]);
+
+        // Assert created location exported.
+        $this->assertEquals([
+            $location->address_line_1,
+            $location->address_line_2 ?? '',
+            $location->address_line_3 ?? '',
+            $location->city,
+            $location->county,
+            $location->postcode,
+            $location->country,
+            1,
         ], $csv[1]);
     }
 

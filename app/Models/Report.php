@@ -179,28 +179,19 @@ class Report extends Model
             'Number of Accounts Attributed',
         ];
 
-        $data = [$headings];
-
-        $callback = function (Organisation $organisation) {
+        $data = $this->getOrganisationExportResults()->map(function ($row) {
             return [
-                $organisation->id,
-                $organisation->name,
-                $organisation->services_count,
-                $organisation->email,
-                $organisation->phone,
-                $organisation->url,
-                $organisation->non_admin_users_count,
+                $row->organisation_id,
+                $row->organisation_name,
+                $row->organisation_services_count,
+                $row->organisation_email,
+                $row->organisation_phone,
+                $row->organisation_url,
+                $row->non_admin_users_count
             ];
-        };
+        })->all();
 
-        Organisation::query()
-            ->withCount('services', 'nonAdminUsers')
-            ->chunk(200, function (Collection $organisations) use (&$data, $callback) {
-                // Loop through each service in the chunk.
-                foreach ($this->reportRowGenerator($organisations, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));
@@ -224,29 +215,20 @@ class Report extends Model
             'Number of Services Delivered at The Location',
         ];
 
-        $data = [$headings];
-
-        $callback = function (Location $location) {
+        $data = $this->getLocationExportResults()->map(function ($row) {
             return [
-                $location->address_line_1,
-                $location->address_line_2,
-                $location->address_line_3,
-                $location->city,
-                $location->county,
-                $location->postcode,
-                $location->country,
-                $location->services_count,
+                $row->location_address_line_1,
+                $row->location_address_line_2,
+                $row->location_address_line_3,
+                $row->location_city,
+                $row->location_county,
+                $row->location_postcode,
+                $row->location_country,
+                $row->location_services_count,
             ];
-        };
+        })->all();
 
-        Location::query()
-            ->withCount('services')
-            ->chunk(200, function (Collection $locations) use (&$data, $callback) {
-                // Loop through each location in the chunk.
-                foreach ($this->reportRowGenerator($locations, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

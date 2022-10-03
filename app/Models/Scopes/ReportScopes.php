@@ -90,4 +90,75 @@ EOT;
 
         return $query->get();
     }
+
+    /**
+     * Organisation Export Report query
+     *
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getOrganisationExportResults()
+    {
+        $serviceCountQuery = DB::table('services')
+        ->selectRaw('organisation_id, count(*) as count')
+        ->groupBy('organisation_id');
+
+        $nonAdminUsersCountQuery = DB::table('user_roles')
+        ->selectRaw('user_roles.organisation_id as organisation_id, count(user_roles.user_id) as count')
+        ->join('roles', 'roles.id', '=', 'user_roles.role_id')
+        ->whereIn('roles.name', [
+            Role::NAME_SERVICE_WORKER,
+            Role::NAME_ORGANISATION_ADMIN,
+            Role::NAME_SERVICE_ADMIN
+        ])
+        ->groupBy('user_roles.organisation_id', 'user_roles.user_id');
+
+        $query = DB::table('organisations')
+        ->select([
+            'organisations.id as organisation_id',
+            'organisations.name as organisation_name',
+            'organisations.email as organisation_email',
+            'organisations.phone as organisation_phone',
+            'organisations.url as organisation_url',
+        ])
+        ->selectRaw('ifnull(service_counts.count, 0) as organisation_services_count')
+        ->selectRaw('ifnull(non_admin_user_counts.count, 0) as non_admin_users_count')
+        ->distinct()
+        ->leftJoinSub($serviceCountQuery, 'service_counts', function ($join) {
+            $join->on('service_counts.organisation_id', '=', 'organisations.id');
+        })
+        ->leftJoinSub($nonAdminUsersCountQuery, 'non_admin_user_counts', function ($join) {
+            $join->on('non_admin_user_counts.organisation_id', '=', 'organisations.id');
+        });
+
+        return $query->get();
+    }
+
+    /**
+     * Location Export Report query
+     *
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getLocationExportResults()
+    {
+        $serviceCountQuery = DB::table('service_locations')
+        ->selectRaw('location_id, count(*) as count')
+        ->groupBy('location_id');
+
+        $query = DB::table('locations')
+        ->select([
+            'locations.address_line_1 as location_address_line_1',
+            'locations.address_line_2 as location_address_line_2',
+            'locations.address_line_3 as location_address_line_3',
+            'locations.city as location_city',
+            'locations.county as location_county',
+            'locations.postcode as location_postcode',
+            'locations.country as location_country'
+        ])
+        ->selectRaw('ifnull(service_counts.count, 0) as location_services_count')
+        ->leftJoinSub($serviceCountQuery, 'service_counts', function ($join) {
+            $join->on('service_counts.location_id', '=', 'locations.id');
+        });
+
+        return $query->get();
+    }
 }
