@@ -352,31 +352,18 @@ class Report extends Model
             'User Agent',
         ];
 
-        $data = [$headings];
-
-        $callback = function (Audit $audit) {
+        $data = $this->getAuditExportResults($startsAt, $endsAt)->map(function ($row) {
             return [
-                $audit->action,
-                $audit->description,
-                optional($audit->user)->full_name,
-                optional($audit->created_at)->format(CarbonImmutable::ISO8601),
-                $audit->ip_address,
-                $audit->user_agent,
+                $row->action,
+                $row->description,
+                $row->full_name,
+                $row->created_at? (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601) : null,
+                $row->ip_address,
+                $row->user_agent,
             ];
-        };
+        })->all();
 
-        Audit::query()
-            ->with('user')
-            ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
-                // When date range provided, filter page feedback which were created between the date range.
-                $query->whereBetween(table(Audit::class, 'created_at'), [$startsAt, $endsAt]);
-            })
-            ->chunk(200, function (Collection $audits) use (&$data, $callback) {
-                // Loop through each audit in the chunk.
-                foreach ($this->reportRowGenerator($audits, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

@@ -230,4 +230,31 @@ EOT;
 
         return $query->get();
     }
+
+    /**
+     * Audit Export Report query
+     *
+     * @param \Carbon\CarbonImmutable|null $startsAt
+     * @param \Carbon\CarbonImmutable|null $endsAt
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getAuditExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null): Collection
+    {
+        $query = DB::table('audits')
+        ->select([
+            'audits.action as action',
+            'audits.description as description',
+            'audits.created_at as created_at',
+            'audits.ip_address as ip_address',
+            'audits.user_agent as user_agent',
+        ])
+        ->selectRaw('concat(users.first_name," ",users.last_name) as full_name')
+        ->leftJoin('users', 'users.id', '=', 'audits.user_id')
+        ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
+            // When date range provided, filter referrals which were created between the date range.
+            $query->whereBetween('audits.created_at', [$startsAt, $endsAt]);
+        });
+
+        return $query->get();
+    }
 }
