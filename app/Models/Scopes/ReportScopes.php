@@ -224,7 +224,7 @@ EOT;
             'page_feedbacks.url as url',
         ])
         ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter referrals which were created between the date range.
+            // When date range provided, filter feedbacks which were created between the date range.
             $query->whereBetween('page_feedbacks.created_at', [$startsAt, $endsAt]);
         });
 
@@ -251,8 +251,33 @@ EOT;
         ->selectRaw('concat(users.first_name," ",users.last_name) as full_name')
         ->leftJoin('users', 'users.id', '=', 'audits.user_id')
         ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter referrals which were created between the date range.
+            // When date range provided, filter audits which were created between the date range.
             $query->whereBetween('audits.created_at', [$startsAt, $endsAt]);
+        });
+
+        return $query->get();
+    }
+
+    /**
+     * Search Histories Export Report query
+     *
+     * @param \Carbon\CarbonImmutable|null $startsAt
+     * @param \Carbon\CarbonImmutable|null $endsAt
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getSearchHistoriesExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null): Collection
+    {
+        $query = DB::table('search_histories')
+        ->select([
+            'search_histories.count as count',
+            'search_histories.created_at as created_at',
+        ])
+        ->selectRaw('json_unquote(search_histories.query->"$.query.bool.must.bool.should[0].match.name.query") as query')
+        ->selectRaw('json_unquote(search_histories.query->"$.sort[0]._geo_distance") as distance')
+        ->whereRaw('json_contains_path(search_histories.query, "one", "$.query.bool.must.bool.should[0].match.name.query") = 1')
+        ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
+            // When date range provided, filter search histories which were created between the date range.
+            $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
         });
 
         return $query->get();
