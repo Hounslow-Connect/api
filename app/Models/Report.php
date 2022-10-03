@@ -310,27 +310,15 @@ class Report extends Model
             'Page URL',
         ];
 
-        $data = [$headings];
-
-        $callback = function (PageFeedback $pageFeedback) {
+        $data = $this->getFeedbackExportResults($startsAt, $endsAt)->map(function ($row) {
             return [
-                optional($pageFeedback->created_at)->toDateString(),
-                $pageFeedback->feedback,
-                $pageFeedback->url,
+                (new CarbonImmutable($row->created_at))->toDateString(),
+                $row->feedback,
+                $row->url
             ];
-        };
+        })->all();
 
-        PageFeedback::query()
-            ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
-                // When date range provided, filter page feedback which were created between the date range.
-                $query->whereBetween(table(PageFeedback::class, 'created_at'), [$startsAt, $endsAt]);
-            })
-            ->chunk(200, function (Collection $pageFeedbacks) use (&$data, $callback) {
-                // Loop through each page feedback in the chunk.
-                foreach ($this->reportRowGenerator($pageFeedbacks, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

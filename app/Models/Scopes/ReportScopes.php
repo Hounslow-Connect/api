@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use App\Models\StatusUpdate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 trait ReportScopes
@@ -15,7 +16,7 @@ trait ReportScopes
      *
      * @return \Illuminate\Support\Collection
      **/
-    public function getUserExportResults()
+    public function getUserExportResults(): Collection
     {
         $sql = <<<'EOT'
 CASE `id`
@@ -67,7 +68,7 @@ EOT;
      *
      * @return \Illuminate\Support\Collection
      **/
-    public function getServiceExportResults()
+    public function getServiceExportResults(): Collection
     {
         $query = DB::table('services')
         ->select([
@@ -98,7 +99,7 @@ EOT;
      *
      * @return \Illuminate\Support\Collection
      **/
-    public function getOrganisationExportResults()
+    public function getOrganisationExportResults(): Collection
     {
         $serviceCountQuery = DB::table('services')
         ->selectRaw('organisation_id, count(*) as count')
@@ -140,7 +141,7 @@ EOT;
      *
      * @return \Illuminate\Support\Collection
      **/
-    public function getLocationExportResults()
+    public function getLocationExportResults(): Collection
     {
         $serviceCountQuery = DB::table('service_locations')
         ->selectRaw('location_id, count(*) as count')
@@ -167,9 +168,11 @@ EOT;
     /**
      * Referral Export Report query
      *
+     * @param \Carbon\CarbonImmutable|null $startsAt
+     * @param \Carbon\CarbonImmutable|null $endsAt
      * @return \Illuminate\Support\Collection
      **/
-    public function getReferralExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null)
+    public function getReferralExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null): Collection
     {
         $statusUpdateQuery = DB::table('status_updates')
         ->selectRaw('referral_id, max(created_at) as last_update')
@@ -200,6 +203,29 @@ EOT;
         ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
             // When date range provided, filter referrals which were created between the date range.
             $query->whereBetween('referrals.created_at', [$startsAt, $endsAt]);
+        });
+
+        return $query->get();
+    }
+
+    /**
+     * Feedback Export Report query
+     *
+     * @param \Carbon\CarbonImmutable|null $startsAt
+     * @param \Carbon\CarbonImmutable|null $endsAt
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getFeedbackExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null): Collection
+    {
+        $query = DB::table('page_feedbacks')
+        ->select([
+            'page_feedbacks.created_at as created_at',
+            'page_feedbacks.feedback as feedback',
+            'page_feedbacks.url as url',
+        ])
+        ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
+            // When date range provided, filter referrals which were created between the date range.
+            $query->whereBetween('page_feedbacks.created_at', [$startsAt, $endsAt]);
         });
 
         return $query->get();
