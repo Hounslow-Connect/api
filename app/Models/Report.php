@@ -448,43 +448,21 @@ class Report extends Model
             'Admin who Actioned',
         ];
 
-        $data = [$headings];
-
-        $callback = function (UpdateRequest $updateRequest) {
+        $data = $this->getUpdateRequestExportResults($startsAt, $endsAt)->map(function ($row) {
             return [
-                $updateRequest->user->full_name ?? null,
-                $updateRequest->updateable_type,
-                $updateRequest->entry,
-                $updateRequest->created_at->format(CarbonImmutable::ISO8601),
-                $updateRequest->isApproved() ? 'Approved' : 'Declined',
-                $updateRequest->isApproved()
-                ? $updateRequest->approved_at->format(CarbonImmutable::ISO8601)
-                : $updateRequest->deleted_at->format(CarbonImmutable::ISO8601),
-                $updateRequest->actioningUser->full_name ?? null,
+                $row->user_full_name ?? null,
+                $row->updateable_type,
+                $row->entry,
+                (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601),
+                $row->approved_at !== null ? 'Approved' : 'Declined',
+                $row->approved_at !== null
+                ? (new CarbonImmutable($row->approved_at))->format(CarbonImmutable::ISO8601)
+                : (new CarbonImmutable($row->deleted_at))->format(CarbonImmutable::ISO8601),
+                $row->actioning_user_full_name ?? null,
             ];
-        };
+        })->all();
 
-        UpdateRequest::withTrashed()
-            ->select('*')
-            ->withEntry()
-            ->whereNotNull('approved_at')
-            ->orWhereNotNull('deleted_at')
-            ->when($startsAt && $endsAt, function (Builder $query) use ($startsAt, $endsAt) {
-                /*
-             * When date range provided, filter update requests which were created between the
-             * date range.
-             */
-                $query->whereBetween(
-                    table(UpdateRequest::class, 'created_at'),
-                    [$startsAt, $endsAt]
-                );
-            })
-            ->chunk(200, function (Collection $updateRequests) use (&$data, $callback) {
-                // Loop through each update requests in the chunk.
-                foreach ($this->reportRowGenerator($updateRequests, $callback) as $row) {
-                    $data[] = $row;
-                }
-            });
+        array_unshift($data, $headings);
 
         // Upload the report.
         $this->file->upload(array_to_csv($data));

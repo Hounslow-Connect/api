@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use App\Models\StatusUpdate;
+use App\Models\UpdateRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -277,6 +278,41 @@ EOT;
         ->whereRaw('json_contains_path(search_histories.query, "one", "$.query.bool.must.bool.should[0].match.name.query") = 1')
         ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
             // When date range provided, filter search histories which were created between the date range.
+            $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
+        });
+
+        return $query->get();
+    }
+
+    /**
+     * Update Request Export Report query
+     *
+     * @param \Carbon\CarbonImmutable|null $startsAt
+     * @param \Carbon\CarbonImmutable|null $endsAt
+     * @return \Illuminate\Support\Collection
+     **/
+    public function getUpdateRequestExportResults(CarbonImmutable $startsAt = null, CarbonImmutable $endsAt = null): Collection
+    {
+        $entrySql = (new UpdateRequest())->getEntrySql();
+
+        $query = DB::table('update_requests')
+        ->select([
+            'update_requests.updateable_type as updateable_type',
+            'update_requests.created_at as created_at',
+            'update_requests.approved_at as approved_at',
+            'update_requests.deleted_at as deleted_at',
+        ])
+        ->selectRaw("({$entrySql}) as entry")
+        ->selectRaw('concat(users.first_name," ",users.last_name) as user_full_name')
+        ->selectRaw('concat(actioning_users.first_name," ",actioning_users.last_name) as actioning_user_full_name')
+        ->leftJoin('users', 'users.id', '=', 'update_requests.user_id')
+        ->leftJoin('users as actioning_users', 'actioning_users.id', '=', 'update_requests.actioning_user_id')
+        ->where(function ($query) {
+            $query->whereNotNull('update_requests.approved_at')
+            ->orWhereNotNull('update_requests.deleted_at');
+        })
+        ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
+            // When date range provided, filter update requests which were created between the date range.
             $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
         });
 
