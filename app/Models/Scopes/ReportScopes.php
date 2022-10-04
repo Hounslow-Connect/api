@@ -313,7 +313,7 @@ EOT;
             })
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
                 // When date range provided, filter update requests which were created between the date range.
-                $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
+                $query->whereBetween('update_requests.created_at', [$startsAt, $endsAt]);
             });
 
         return $query->get();
