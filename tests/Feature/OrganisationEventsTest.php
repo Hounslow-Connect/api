@@ -595,6 +595,19 @@ class OrganisationEventsTest extends TestCase
         $this->assertEquals($updateRequestResponseData['data'], $payload);
         //And the organisation event should not yet be created
         $this->assertEmpty(OrganisationEvent::all());
+
+        $updateRequestApproveResponse = $this->put(
+            route(
+                'core.v1.update-requests.approve',
+                ['update_request' => $updateRequestId]
+            )
+        );
+
+        $updateRequestApproveResponse->assertSuccessful();
+
+        unset($payload['category_taxonomies']);
+
+        $this->assertDatabaseHas('organisation_events', $payload);
     }
 
     /**

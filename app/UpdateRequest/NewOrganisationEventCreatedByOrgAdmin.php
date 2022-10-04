@@ -7,6 +7,7 @@ use App\Models\File;
 use App\Models\OrganisationEvent;
 use App\Models\Taxonomy;
 use App\Models\UpdateRequest;
+use App\Rules\FileIsMimeType;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,13 @@ class NewOrganisationEventCreatedByOrgAdmin implements AppliesUpdateRequests
                 return $updateRequest->user;
             })
             ->rules();
+
+        // Remove the pending assignment rule since the file is now uploaded.
+        $rules['image_file_id'] = [
+            'nullable',
+            'exists:files,id',
+            new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
+        ];
 
         return ValidatorFacade::make($updateRequest->data, $rules);
     }
