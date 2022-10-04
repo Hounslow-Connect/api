@@ -57,8 +57,8 @@ EOT;
             ->selectRaw('concat_ws(",",group_concat(distinct user_roles.organisation_id), group_concat(distinct user_roles.service_id)) org_service_ids')
             ->join('user_roles', 'user_roles.user_id', '=', 'users.id')
             ->joinSub($rolesQuery, 'all_roles', function ($join) {
-            $join->on('all_roles.id', '=', 'user_roles.role_id');
-        })
+                $join->on('all_roles.id', '=', 'user_roles.role_id');
+            })
             ->groupBy('users.id');
 
         return $query->get();
@@ -128,11 +128,11 @@ EOT;
             ->selectRaw('ifnull(non_admin_user_counts.count, 0) as non_admin_users_count')
             ->distinct()
             ->leftJoinSub($serviceCountQuery, 'service_counts', function ($join) {
-            $join->on('service_counts.organisation_id', '=', 'organisations.id');
-        })
+                $join->on('service_counts.organisation_id', '=', 'organisations.id');
+            })
             ->leftJoinSub($nonAdminUsersCountQuery, 'non_admin_user_counts', function ($join) {
-            $join->on('non_admin_user_counts.organisation_id', '=', 'organisations.id');
-        });
+                $join->on('non_admin_user_counts.organisation_id', '=', 'organisations.id');
+            });
 
         return $query->get();
     }
@@ -160,8 +160,8 @@ EOT;
             ])
             ->selectRaw('ifnull(service_counts.count, 0) as services_count')
             ->leftJoinSub($serviceCountQuery, 'service_counts', function ($join) {
-            $join->on('service_counts.location_id', '=', 'locations.id');
-        });
+                $join->on('service_counts.location_id', '=', 'locations.id');
+            });
 
         return $query->get();
     }
@@ -199,12 +199,12 @@ EOT;
             ->leftJoin('organisation_taxonomies', 'organisation_taxonomies.id', '=', 'referrals.organisation_taxonomy_id')
             ->leftJoin('taxonomies', 'taxonomies.id', '=', 'organisation_taxonomies.taxonomy_id')
             ->leftJoinSub($statusUpdateQuery, 'status_updates', function ($join) {
-            $join->on('status_updates.referral_id', '=', 'referrals.id');
-        })
+                $join->on('status_updates.referral_id', '=', 'referrals.id');
+            })
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter referrals which were created between the date range.
-            $query->whereBetween('referrals.created_at', [$startsAt, $endsAt]);
-        });
+                // When date range provided, filter referrals which were created between the date range.
+                $query->whereBetween('referrals.created_at', [$startsAt, $endsAt]);
+            });
 
         return $query->get();
     }
@@ -225,9 +225,9 @@ EOT;
                 'page_feedbacks.url as url',
             ])
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter feedbacks which were created between the date range.
-            $query->whereBetween('page_feedbacks.created_at', [$startsAt, $endsAt]);
-        });
+                // When date range provided, filter feedbacks which were created between the date range.
+                $query->whereBetween('page_feedbacks.created_at', [$startsAt, $endsAt]);
+            });
 
         return $query->get();
     }
@@ -252,9 +252,9 @@ EOT;
             ->selectRaw('concat(users.first_name," ",users.last_name) as full_name')
             ->leftJoin('users', 'users.id', '=', 'audits.user_id')
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter audits which were created between the date range.
-            $query->whereBetween('audits.created_at', [$startsAt, $endsAt]);
-        });
+                // When date range provided, filter audits which were created between the date range.
+                $query->whereBetween('audits.created_at', [$startsAt, $endsAt]);
+            });
 
         return $query->get();
     }
@@ -277,9 +277,9 @@ EOT;
             ->selectRaw('json_unquote(search_histories.query->"$.sort[0]._geo_distance") as distance')
             ->whereRaw('json_contains_path(search_histories.query, "one", "$.query.bool.must.bool.should[0].match.name.query") = 1')
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter search histories which were created between the date range.
-            $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
-        });
+                // When date range provided, filter search histories which were created between the date range.
+                $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
+            });
 
         return $query->get();
     }
@@ -308,13 +308,13 @@ EOT;
             ->leftJoin('users', 'users.id', '=', 'update_requests.user_id')
             ->leftJoin('users as actioning_users', 'actioning_users.id', '=', 'update_requests.actioning_user_id')
             ->where(function ($query) {
-            $query->whereNotNull('update_requests.approved_at')
+                $query->whereNotNull('update_requests.approved_at')
                 ->orWhereNotNull('update_requests.deleted_at');
-        })
+            })
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
-            // When date range provided, filter update requests which were created between the date range.
-            $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
-        });
+                // When date range provided, filter update requests which were created between the date range.
+                $query->whereBetween('search_histories.created_at', [$startsAt, $endsAt]);
+            });
 
         return $query->get();
     }
