@@ -8,6 +8,7 @@ use App\Emails\ReferralCreated\NotifyServiceEmail;
 use App\Events\EndpointHit;
 use App\Models\Audit;
 use App\Models\Referral;
+use App\Models\Service;
 use App\Sms\ReferralCreated\NotifyClientSms;
 use App\Sms\ReferralCreated\NotifyRefereeSms;
 
@@ -25,9 +26,12 @@ class ReferralCreated
             return;
         }
 
-        $this->notifyClient($event->getModel());
-        $this->notifyReferee($event->getModel());
-        $this->notifyService($event->getModel());
+        $referral = $event->getModel();
+        $this->notifyClient($referral);
+        $this->notifyReferee($referral);
+        if ($referral->service->referral_method === Service::REFERRAL_METHOD_INTERNAL) {
+            $this->notifyService($referral);
+        }
     }
 
     /**

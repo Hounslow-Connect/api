@@ -432,6 +432,44 @@ class ReferralsTest extends TestCase
         ]);
     }
 
+    public function test_guest_can_create_referral_for_a_service_without_a_contact_method()
+    {
+        $service = factory(Service::class)->create();
+
+        $payload = [
+            'service_id' => $service->id,
+            'name' => $this->faker->name,
+            'email' => $this->faker->safeEmail,
+            'phone' => null,
+            'other_contact' => null,
+            'postcode_outward_code' => null,
+            'comments' => null,
+            'referral_consented' => true,
+            'feedback_consented' => false,
+            'referee_name' => $this->faker->name,
+            'referee_email' => $this->faker->safeEmail,
+            'referee_phone' => random_uk_phone(),
+            'organisation' => $this->faker->company,
+        ];
+
+        $response = $this->json('POST', '/core/v1/referrals', $payload);
+
+        $response->assertStatus(Response::HTTP_CREATED);
+        $response->assertJsonFragment([
+            'service_id' => $payload['service_id'],
+            'name' => $payload['name'],
+            'email' => $payload['email'],
+            'phone' => $payload['phone'],
+            'other_contact' => $payload['other_contact'],
+            'postcode_outward_code' => $payload['postcode_outward_code'],
+            'comments' => $payload['comments'],
+            'referee_name' => $payload['referee_name'],
+            'referee_email' => $payload['referee_email'],
+            'referee_phone' => $payload['referee_phone'],
+            'referee_organisation' => $payload['organisation'],
+        ]);
+    }
+
     public function test_audit_created_when_created()
     {
         $this->fakeEvents();
