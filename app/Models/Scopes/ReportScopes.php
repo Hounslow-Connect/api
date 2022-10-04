@@ -309,7 +309,7 @@ EOT;
             ->leftJoin('users as actioning_users', 'actioning_users.id', '=', 'update_requests.actioning_user_id')
             ->where(function ($query) {
                 $query->whereNotNull('update_requests.approved_at')
-                ->orWhereNotNull('update_requests.deleted_at');
+                    ->orWhereNotNull('update_requests.deleted_at');
             })
             ->when($startsAt && $endsAt, function ($query) use ($startsAt, $endsAt) {
                 // When date range provided, filter update requests which were created between the date range.
