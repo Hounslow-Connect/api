@@ -9,9 +9,7 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Exception;
 use Generator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
@@ -105,7 +103,7 @@ class Report extends Model
                 $row->email,
                 $row->max_role,
                 $row->all_permissions,
-                $row->org_service_ids
+                $row->org_service_ids,
             ];
         })->all();
 
@@ -152,7 +150,7 @@ class Report extends Model
                 $row->service_referral_method,
                 $row->service_referral_email,
                 $row->service_status,
-                $row->service_locations
+                $row->service_locations,
             ];
         })->all();
 
@@ -187,7 +185,7 @@ class Report extends Model
                 $row->organisation_email,
                 $row->organisation_phone,
                 $row->organisation_url,
-                $row->non_admin_users_count
+                $row->non_admin_users_count,
             ];
         })->all();
 
@@ -272,10 +270,10 @@ class Report extends Model
                 $row->service_id,
                 $row->service_name,
                 (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601),
-                $row->status === Referral::STATUS_COMPLETED? (new CarbonImmutable($row->last_update))->format(CarbonImmutable::ISO8601) : '',
-                $row->referee_name === null? 'Self' : 'Champion',
+                $row->status === Referral::STATUS_COMPLETED ? (new CarbonImmutable($row->last_update))->format(CarbonImmutable::ISO8601) : '',
+                $row->referee_name === null ? 'Self' : 'Champion',
                 $row->organisation?? $row->taxonomy_name,
-                $row->consented_at? (new CarbonImmutable($row->consented_at))->format(CarbonImmutable::ISO8601) : null
+                $row->consented_at ? (new CarbonImmutable($row->consented_at))->format(CarbonImmutable::ISO8601) : null,
             ];
         })->all();
 
@@ -314,7 +312,7 @@ class Report extends Model
             return [
                 (new CarbonImmutable($row->created_at))->toDateString(),
                 $row->feedback,
-                $row->url
+                $row->url,
             ];
         })->all();
 
@@ -357,7 +355,7 @@ class Report extends Model
                 $row->action,
                 $row->description,
                 $row->full_name,
-                $row->created_at? (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601) : null,
+                $row->created_at ? (new CarbonImmutable($row->created_at))->format(CarbonImmutable::ISO8601) : null,
                 $row->ip_address,
                 $row->user_agent,
             ];
@@ -406,7 +404,7 @@ class Report extends Model
             }
 
             return [
-                $row->created_at? (new CarbonImmutable($row->created_at))->toDateString() : null,
+                $row->created_at ? (new CarbonImmutable($row->created_at))->toDateString() : null,
                 $row->query,
                 $row->count,
                 $coordinate,
