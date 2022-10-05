@@ -2951,7 +2951,7 @@ class ServicesTest extends TestCase
             'file' => 'data:image/png;base64,' . base64_encode($image),
         ]);
 
-        $response = $this->json('POST', '/core/v1/services', [
+        $payload = [
             'organisation_id' => $organisation->id,
             'slug' => 'test-service',
             'name' => 'Test Service',
@@ -2991,14 +2991,48 @@ class ServicesTest extends TestCase
             'gallery_items' => [],
             'category_taxonomies' => [],
             'logo_file_id' => $this->getResponseContent($imageResponse, 'data.id'),
-        ]);
+        ];
 
-        $serviceId = $this->getResponseContent($response, 'data.id');
+        $response = $this->json('POST', '/core/v1/services', $payload);
+
+        $updateRequestId = $this->getResponseContent($response, 'id');
+        dump('Update Request ID:', $updateRequestId);
+
 
         $response->assertStatus(Response::HTTP_OK);
-        $this->assertDatabaseHas(table(UpdateRequest::class), ['updateable_id' => $serviceId]);
-        $updateRequest = UpdateRequest::where('updateable_id', $serviceId)->firstOrFail();
+        $this->assertDatabaseHas(table(UpdateRequest::class), [
+            'id' => $updateRequestId,
+            'updateable_id' => null
+        ]);
+        $updateRequest = UpdateRequest::where('id', $updateRequestId)->firstOrFail();
         $this->assertEquals($this->getResponseContent($imageResponse, 'data.id'), $updateRequest->data['logo_file_id']);
+
+        $globalAdminUser = factory(User::class)->create()->makeGlobalAdmin();
+        Passport::actingAs($globalAdminUser);
+
+        //And the organisation event should not yet be created
+        $this->assertEmpty(Service::all());
+
+        // Get the event image for the update request
+        $response = $this->get("/core/v1/services/new/logo.png?update_request_id=$updateRequestId");
+        // dump($response);
+        $this->assertEquals($image, $response->content());
+
+        $serviceApproveResponse = $this->put(
+            route(
+                'core.v1.update-requests.approve',
+                ['update_request' => $updateRequestId]
+            )
+        );
+
+        $serviceApproveResponse->assertSuccessful();
+
+        unset($payload['useful_infos']);
+        unset($payload['offerings']);
+        unset($payload['gallery_items']);
+        unset($payload['category_taxonomies']);
+
+        $this->assertDatabaseHas('services', $payload);
     }
 
     /*

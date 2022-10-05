@@ -103,7 +103,10 @@ Route::prefix('/core/v1')
             // Organisation Events.
             Route::match(['GET', 'POST'], '/organisation-events/index', 'OrganisationEventController@index');
             Route::apiResource('/organisation-events', 'OrganisationEventController');
-            Route::get('/organisation-events/{organisationEvent}/image.{suffix}', 'OrganisationEvent\\ImageController')
+            Route::get('/organisation-events/new/image.{suffix}', 'OrganisationEvent\\ImageController@showNew')
+                ->where('suffix', 'png|jpg|jpeg|svg')
+                ->name('organisation-events.image-new');
+            Route::get('/organisation-events/{organisationEventId}/image.{suffix}', 'OrganisationEvent\\ImageController@show')
                 ->where('suffix', 'png|jpg|jpeg|svg')
                 ->name('organisation-events.image');
             Route::get('/organisation-events/{organisationEvent}/event.ics', 'OrganisationEvent\\CalendarController');
@@ -148,8 +151,10 @@ Route::prefix('/core/v1')
             Route::put('/services/{service}/refresh', 'Service\\RefreshController')
                 ->name('services.refresh');
             Route::get('/services/{service}/related', 'Service\\RelatedController')
-                ->name('services.related');
-            Route::get('/services/{service}/logo.png', 'Service\\LogoController')
+            ->name('services.related');
+            Route::get('/services/new/logo.png', 'Service\\LogoController@showNew')
+                ->name('services.logo-new');
+            Route::get('/services/{service}/logo.png', 'Service\\LogoController@show')
                 ->name('services.logo');
             Route::get('/services/{service}/gallery-items/{file}', 'Service\\GalleryItemController')
                 ->name('services.gallery-items');
