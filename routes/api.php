@@ -151,7 +151,7 @@ Route::prefix('/core/v1')
             Route::put('/services/{service}/refresh', 'Service\\RefreshController')
                 ->name('services.refresh');
             Route::get('/services/{service}/related', 'Service\\RelatedController')
-            ->name('services.related');
+                ->name('services.related');
             Route::get('/services/new/logo.png', 'Service\\LogoController@showNew')
                 ->name('services.logo-new');
             Route::get('/services/{service}/logo.png', 'Service\\LogoController@show')
