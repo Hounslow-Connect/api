@@ -106,7 +106,7 @@ Route::prefix('/core/v1')
             Route::get('/organisation-events/new/image.{suffix}', 'OrganisationEvent\\ImageController@showNew')
                 ->where('suffix', 'png|jpg|jpeg|svg')
                 ->name('organisation-events.image-new');
-            Route::get('/organisation-events/{organisationEventId}/image.{suffix}', 'OrganisationEvent\\ImageController@show')
+            Route::get('/organisation-events/{organisationEvent}/image.{suffix}', 'OrganisationEvent\\ImageController@show')
                 ->where('suffix', 'png|jpg|jpeg|svg')
                 ->name('organisation-events.image');
             Route::get('/organisation-events/{organisationEvent}/event.ics', 'OrganisationEvent\\CalendarController');

@@ -2996,7 +2996,6 @@ class ServicesTest extends TestCase
         $response = $this->json('POST', '/core/v1/services', $payload);
 
         $updateRequestId = $this->getResponseContent($response, 'id');
-        dump('Update Request ID:', $updateRequestId);
 
 
         $response->assertStatus(Response::HTTP_OK);
@@ -3015,7 +3014,7 @@ class ServicesTest extends TestCase
 
         // Get the event image for the update request
         $response = $this->get("/core/v1/services/new/logo.png?update_request_id=$updateRequestId");
-        // dump($response);
+
         $this->assertEquals($image, $response->content());
 
         $serviceApproveResponse = $this->put(

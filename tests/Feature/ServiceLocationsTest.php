@@ -248,6 +248,50 @@ class ServiceLocationsTest extends TestCase
         ]);
     }
 
+    public function test_service_admin_can_create_one_with_an_image()
+    {
+        $location = factory(Location::class)->create();
+        $service = factory(Service::class)->create();
+        $user = factory(User::class)->create()->makeServiceAdmin($service);
+        $image = Storage::disk('local')->get('/test-data/image.png');
+
+        Passport::actingAs($user);
+
+        $imageResponse = $this->json('POST', '/core/v1/files', [
+            'is_private' => false,
+            'mime_type' => 'image/png',
+            'file' => 'data:image/png;base64,' . base64_encode($image),
+        ]);
+
+        $payload = [
+            'service_id' => $service->id,
+            'location_id' => $location->id,
+            'name' => null,
+            'regular_opening_hours' => [],
+            'holiday_opening_hours' => [],
+            'image_file_id' => $this->getResponseContent($imageResponse, 'data.id')
+        ];
+
+        $response = $this->json('POST', '/core/v1/service-locations', $payload);
+
+        $response->assertStatus(Response::HTTP_CREATED);
+        $response->assertJsonFragment([
+            'service_id' => $service->id,
+            'location_id' => $location->id,
+            'has_image' => true,
+            'name' => null,
+            'regular_opening_hours' => [],
+            'holiday_opening_hours' => [],
+        ]);
+
+        $serviceLocationId = $this->getResponseContent($response, 'data.id');
+
+        // Get the event image for the service location
+        $response = $this->get("/core/v1/service-locations/$serviceLocationId/image.png");
+
+        $this->assertEquals($image, $response->content());
+    }
+
     public function test_audit_created_when_created()
     {
         $this->fakeEvents();
