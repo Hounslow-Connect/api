@@ -1567,6 +1567,22 @@ class OrganisationEventsTest extends TestCase
     /**
      * @test
      */
+    public function getSingleOrganisationEventWithoutLocationAsGuest200()
+    {
+        $this->fakeEvents();
+
+        $organisationEvent = factory(OrganisationEvent::class)->create([
+            'is_virtual' => false,
+        ]);
+
+        $response = $this->json('GET', "/core/v1/organisation-events/{$organisationEvent->id}");
+
+        $response->assertStatus(Response::HTTP_OK);
+    }
+
+    /**
+     * @test
+     */
     public function getSingleOrganisationEventImageAsGuest200()
     {
         $organisationEvent = factory(OrganisationEvent::class)->states('withImage')->create();
