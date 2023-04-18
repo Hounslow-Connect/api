@@ -63,28 +63,6 @@ class ServicePersistenceService implements DataPersistenceService
                 'logo_file_id' => $request->missing('logo_file_id'),
             ]);
 
-            // if ($request->filled('gallery_items') && !$request->isPreview()) {
-            //     foreach ($request->gallery_items as $galleryItem) {
-            //         /** @var \App\Models\File $file */
-            //         $file = File::findOrFail($galleryItem['file_id'])->assigned();
-
-            //         // Create resized version for common dimensions.
-            //         foreach (config('ck.cached_image_dimensions') as $maxDimension) {
-            //             $file->resizedVersion($maxDimension);
-            //         }
-            //     }
-            // }
-
-            // if ($request->filled('logo_file_id') && !$request->isPreview()) {
-            //     /** @var \App\Models\File $file */
-            //     $file = File::findOrFail($request->logo_file_id)->assigned();
-
-            //     // Create resized version for common dimensions.
-            //     foreach (config('ck.cached_image_dimensions') as $maxDimension) {
-            //         $file->resizedVersion($maxDimension);
-            //     }
-            // }
-
             // Loop through each useful info.
             foreach ($request->input('useful_infos', []) as $usefulInfo) {
                 $data['useful_infos'][] = [
