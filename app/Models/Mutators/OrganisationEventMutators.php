@@ -47,7 +47,7 @@ trait OrganisationEventMutators
             urlencode($this->startDateTime->format('Ymd\\THis\\Z')),
             urlencode($this->endDateTime->format('Ymd\\THis\\Z')),
             urlencode($this->title),
-            $this->location ? urlencode($this->location->toAddress()->__toString()) : '',
+            $this->location_id ? urlencode($this->location->toAddress()->__toString()) : '',
             urlencode($this->intro)
         );
     }
@@ -64,7 +64,7 @@ trait OrganisationEventMutators
             urlencode($this->startDateTime->format(DateTime::ATOM)),
             urlencode($this->endDateTime->format(DateTime::ATOM)),
             urlencode($this->title),
-            $this->location ? urlencode($this->location->toAddress()->__toString()) : '',
+            $this->location_id ? urlencode($this->location->toAddress()->__toString()) : '',
             urlencode($this->intro)
         );
     }
