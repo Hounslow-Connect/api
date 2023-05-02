@@ -2997,11 +2997,10 @@ class ServicesTest extends TestCase
 
         $updateRequestId = $this->getResponseContent($response, 'id');
 
-
         $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseHas(table(UpdateRequest::class), [
             'id' => $updateRequestId,
-            'updateable_id' => null
+            'updateable_id' => null,
         ]);
         $updateRequest = UpdateRequest::where('id', $updateRequestId)->firstOrFail();
         $this->assertEquals($this->getResponseContent($imageResponse, 'data.id'), $updateRequest->data['logo_file_id']);
@@ -3718,7 +3717,7 @@ class ServicesTest extends TestCase
                             'errors' => [
                                 'organisation_id' => [
                                     "validation.uuid",
-                            "The organisation id field must contain an ID for an organisation you are an organisation admin for."
+                                    "The organisation id field must contain an ID for an organisation you are an organisation admin for.",
                                 ],
                             ],
                         ],
@@ -3727,7 +3726,7 @@ class ServicesTest extends TestCase
                             'errors' => [
                                 'organisation_id' => [
                                     "The selected organisation id is invalid.",
-                            "The organisation id field must contain an ID for an organisation you are an organisation admin for."
+                                    "The organisation id field must contain an ID for an organisation you are an organisation admin for.",
                                 ],
                             ],
                         ],
