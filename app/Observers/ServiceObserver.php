@@ -98,6 +98,7 @@ class ServiceObserver
         $service->socialMedias->each->delete();
         $service->usefulInfos->each->delete();
         $service->serviceGalleryItems->each->delete();
+        $service->serviceEligibilities()->delete();
         $service->serviceTaxonomies->each->delete();
         $service->offerings->each->delete();
         $service->serviceRefreshTokens->each->delete();
