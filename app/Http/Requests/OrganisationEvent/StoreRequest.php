@@ -52,7 +52,7 @@ class StoreRequest extends FormRequest
             'end_date' => ['required', 'date_format:Y-m-d', new DateSanity($this)],
             'start_time' => ['required', 'date_format:H:i:s', new DateSanity($this)],
             'end_time' => ['required', 'date_format:H:i:s', new DateSanity($this)],
-            'intro' => ['required', 'string', 'min:1', 'max:300'],
+            'intro' => ['required', 'string', 'min:1', 'max:255'],
             'description' => [
                 'required',
                 'string',
