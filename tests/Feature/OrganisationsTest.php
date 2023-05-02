@@ -1073,6 +1073,25 @@ class OrganisationsTest extends TestCase
         $this->assertDatabaseMissing((new SocialMedia())->getTable(), ['url' => 'https://twitter.com/ayupdigital/']);
     }
 
+    public function test_services_with_eligibilities_are_be_deleted_when_deleting_one()
+    {
+        $organisation = factory(Organisation::class)->create();
+        $service = factory(Service::class)
+            ->states('withEligibilityTaxonomies')
+            ->create([
+                'organisation_id' => $organisation->id,
+            ]);
+
+        $user = factory(User::class)->create()->makeSuperAdmin();
+
+        Passport::actingAs($user);
+
+        $response = $this->json('DELETE', "/core/v1/organisations/{$organisation->id}");
+
+        $response->assertStatus(Response::HTTP_OK);
+        $this->assertDatabaseMissing((new Service())->getTable(), ['id' => $service->id]);
+    }
+
     public function test_audit_created_when_deleted()
     {
         $this->fakeEvents();
