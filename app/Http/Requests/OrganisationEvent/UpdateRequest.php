@@ -51,7 +51,7 @@ class UpdateRequest extends FormRequest
             'end_date' => ['date_format:Y-m-d', new DateSanity($this)],
             'start_time' => ['date_format:H:i:s', new DateSanity($this)],
             'end_time' => ['date_format:H:i:s', new DateSanity($this)],
-            'intro' => ['string', 'min:1', 'max:300'],
+            'intro' => ['string', 'min:1', 'max:255'],
             'description' => [
                 'string',
                 new MarkdownMinLength(1),
