@@ -99,7 +99,7 @@ class UpdateRequest extends FormRequest
                     $this->service->status
                 ),
             ],
-            'intro' => ['string', 'min:1', 'max:300'],
+            'intro' => ['string', 'min:1', 'max:255'],
             'description' => [
                 'string',
                 new MarkdownMinLength(1),
