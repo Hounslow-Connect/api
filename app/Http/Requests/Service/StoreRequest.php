@@ -75,7 +75,7 @@ class StoreRequest extends FormRequest
                     Service::STATUS_INACTIVE
                 ),
             ],
-            'intro' => ['required', 'string', 'min:1', 'max:300'],
+            'intro' => ['required', 'string', 'min:1', 'max:255'],
             'description' => [
                 'required',
                 'string',
