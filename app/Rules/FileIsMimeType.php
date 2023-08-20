@@ -8,7 +8,7 @@ use Illuminate\Contracts\Validation\Rule;
 class FileIsMimeType implements Rule
 {
     /**
-     * @var string
+     * @var string[]
      */
     protected $mimeTypes;
 
@@ -44,6 +44,6 @@ class FileIsMimeType implements Rule
      */
     public function message()
     {
-        return "The :attribute must be of type $this->mimeTypes.";
+        return "The :attribute must be of type " . (is_array($this->mimeTypes) ? implode(',', $this->mimeTypes) : $this->mimeTypes) . ".";
     }
 }

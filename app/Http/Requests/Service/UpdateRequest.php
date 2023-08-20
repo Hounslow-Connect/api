@@ -175,7 +175,7 @@ class UpdateRequest extends FormRequest
                     $referralMethod = $this->input('referral_method', $this->service->referral_method);
 
                     return $referralMethod === Service::REFERRAL_METHOD_INTERNAL
-                    && $this->service->referral_email === null;
+                        && $this->service->referral_email === null;
                 }),
                 new NullableIf(function () {
                     $referralMethod = $this->input('referral_method', $this->service->referral_method);
@@ -198,7 +198,7 @@ class UpdateRequest extends FormRequest
                     $referralMethod = $this->input('referral_method', $this->service->referral_method);
 
                     return $referralMethod === Service::REFERRAL_METHOD_EXTERNAL
-                    && $this->service->referral_url === null;
+                        && $this->service->referral_url === null;
                 }),
                 new NullableIf(function () {
                     $referralMethod = $this->input('referral_method', $this->service->referral_method);
@@ -251,7 +251,7 @@ class UpdateRequest extends FormRequest
             'gallery_items.*.file_id' => [
                 'required_with:gallery_items.*',
                 'exists:files,id',
-                new FileIsMimeType(File::MIME_TYPE_PNG),
+                new FileIsMimeType(File::MIME_TYPE_PNG, FILE::MIME_TYPE_JPG, FILE::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(function (File $file) {
                     return $this->service
                         ->serviceGalleryItems()
@@ -286,7 +286,7 @@ class UpdateRequest extends FormRequest
             'logo_file_id' => [
                 'nullable',
                 'exists:files,id',
-                new FileIsMimeType(File::MIME_TYPE_PNG),
+                new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(),
             ],
         ];
