@@ -58,7 +58,8 @@ class UpdateRequest extends FormRequest
                     return $this->user()->isGlobalAdmin();
                 }),
                 'url',
-                'max:255', ],
+                'max:255',
+            ],
             'email' => [
                 new NullableIf(function () {
                     return $this->user()->isGlobalAdmin() || $this->input('phone', $this->organisation->phone) !== null;
@@ -78,7 +79,7 @@ class UpdateRequest extends FormRequest
             'logo_file_id' => [
                 'nullable',
                 'exists:files,id',
-                new FileIsMimeType(File::MIME_TYPE_PNG),
+                new FileIsMimeType(File::MIME_TYPE_PNG, File::MIME_TYPE_JPG, File::MIME_TYPE_SVG),
                 new FileIsPendingAssignment(),
             ],
             'social_medias' => ['array'],
@@ -94,7 +95,8 @@ class UpdateRequest extends FormRequest
                 ]),
             ],
             'social_medias.*.url' => ['required_with:social_medias.*', 'url', 'max:255'],
-            'category_taxonomies' => ['array', new CanUpdateCategoryTaxonomyRelationships($this->user('api'), $this->organisation),
+            'category_taxonomies' => [
+                'array', new CanUpdateCategoryTaxonomyRelationships($this->user('api'), $this->organisation),
             ],
             'category_taxonomies.*' => [
                 'exists:taxonomies,id',
